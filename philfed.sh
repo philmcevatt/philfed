@@ -165,7 +165,7 @@ dnf -y install \
   unzip \
   p7zip \
   p7zip-plugins \
-  unrar || true
+  unrar
 
 section "Flatpak and Flathub"
 dnf -y install flatpak
