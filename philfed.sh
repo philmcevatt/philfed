@@ -110,7 +110,7 @@ dnf -y install \
   okular \
   pinta \
   qbittorrent \
-  spectacle || true
+  spectacle
 
 section "Multimedia and codecs"
 dnf -y swap ffmpeg-free ffmpeg --allowerasing || true
@@ -130,7 +130,7 @@ dnf -y install \
   gstreamer1-libav \
   openh264 \
   gstreamer1-plugin-openh264 \
-  mozilla-openh264 || true
+  mozilla-openh264
 
 section "Gaming and recording stack"
 dnf -y install \
@@ -148,7 +148,7 @@ dnf -y install \
   mesa-dri-drivers \
   mesa-vulkan-drivers \
   vulkan-loader \
-  kernel-modules-extra || true
+  kernel-modules-extra
 
 section "Office and utilities"
 dnf -y install \
