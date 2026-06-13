@@ -1,16 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-LOGFILE="/var/log/philfed.log"
-exec > >(tee -a "$LOGFILE")
-exec 2>&1
-
 # Phil's Fedora 44 KDE Minimal Bootstrap
 # Start from Fedora Everything -> Minimal Install -> TTY
 # Run with:
 #   sudo bash philfed.sh
 
-TARGET_USER="pmc"
+LOGFILE="/var/log/philfed.log"
+exec > >(tee -a "$LOGFILE")
+exec 2>&1
 
 INSTALL_NVIDIA=true
 INSTALL_VIRT=true
@@ -30,20 +28,24 @@ if [[ "${EUID}" -ne 0 ]]; then
   exit 1
 fi
 
+TARGET_USER="${SUDO_USER:-$(logname 2>/dev/null || echo "")}"
+
+if [[ -z "${TARGET_USER}" || "${TARGET_USER}" == "root" ]]; then
+  echo "Could not detect the normal user account."
+  echo "Run this as:"
+  echo "sudo bash philfed.sh"
+  exit 1
+fi
+
 FEDORA_VERSION="$(rpm -E %fedora)"
 
-section "Check target user"
-if ! id "${TARGET_USER}" &>/dev/null; then
-  warn "User ${TARGET_USER} does not exist yet."
-  read -rp "Create user ${TARGET_USER}? [y/N] " CREATE_USER
-  if [[ "${CREATE_USER,,}" == "y" ]]; then
-    useradd -m -G wheel "${TARGET_USER}"
-    passwd "${TARGET_USER}"
-  else
-    echo "Cannot continue without user ${TARGET_USER}."
-    exit 1
-  fi
-fi
+section "Environment"
+echo "Fedora Version: ${FEDORA_VERSION}"
+echo "Target User: ${TARGET_USER}"
+echo "Install NVIDIA: ${INSTALL_NVIDIA}"
+echo "Install Virt: ${INSTALL_VIRT}"
+echo "Fix /games permissions: ${FIX_GAMES_PERMISSIONS}"
+echo "Label Btrfs filesystems: ${LABEL_BTRFS}"
 
 section "Base update and core tools"
 dnf -y upgrade --refresh
@@ -108,7 +110,7 @@ dnf -y install \
   okular \
   pinta \
   qbittorrent \
-  spectacle
+  spectacle || true
 
 section "Multimedia and codecs"
 dnf -y swap ffmpeg-free ffmpeg --allowerasing || true
@@ -158,7 +160,7 @@ dnf -y install \
   fish \
   gnome-disk-utility \
   btrfs-assistant \
-  snapper \  
+  snapper \
   kio-admin \
   unzip \
   p7zip \
