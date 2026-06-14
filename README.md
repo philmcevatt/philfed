@@ -16,9 +16,12 @@ sudo ./philfed.sh
 reboot
 
 
-Recommended Fedora Everything partitioning:
+# Recommended Fedora Everything partitioning:
 
 /boot/efi  1GB  FAT32
+
 /boot      2GB  ext4
+
 /           150GB Btrfs
+
 /games      remainder Btrfs
