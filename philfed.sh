@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Phil's Fedora 44 KDE Minimal Bootstrap
+# Phil's Fedora 44 KDE Minimal Bootstrap v4
 # Start from Fedora Everything -> Minimal Install -> TTY
 # Run with:
 #   sudo bash philfed.sh
@@ -72,6 +72,14 @@ dnf -y install \
   plasma-discover-flatpak \
   plasma-nm \
   plasma-pa \
+  systemsettings \
+  kinfocenter \
+  kdialog \
+  breeze-gtk \
+  kde-gtk-config \
+  kdegraphics-thumbnailers \
+  kirigami \
+  qqc2-desktop-style \
   dolphin \
   kate \
   kcalc \
@@ -80,13 +88,16 @@ dnf -y install \
   kscreen
 
 section "Enable Plasma Login Manager"
+systemctl disable sddm gdm lightdm 2>/dev/null || true
 systemctl enable --force plasmalogin.service
 systemctl set-default graphical.target
 
 section "Audio, networking, firmware, bluetooth"
 dnf -y install \
   pipewire \
+  pipewire-pulseaudio \
   wireplumber \
+  alsa-utils \
   NetworkManager \
   NetworkManager-wifi \
   wpa_supplicant \
@@ -114,6 +125,8 @@ dnf -y install \
 
 section "Multimedia and codecs"
 dnf -y swap ffmpeg-free ffmpeg --allowerasing || true
+
+dnf -y group upgrade multimedia --setopt="install_weak_deps=False" --exclude=PackageKit-gstreamer-plugin || true
 
 dnf -y install \
   vlc \
@@ -180,13 +193,13 @@ flatpak install -y flathub com.heroicgameslauncher.hgl || warn "Heroic Flatpak f
 
 section "Set fish as shell for ${TARGET_USER}"
 if [[ -x /usr/bin/fish ]]; then
-  chsh -s /usr/bin/fish "${TARGET_USER}" || true
+  chsh -s /usr/bin/fish "${TARGET_USER}" || warn "Could not set fish shell for ${TARGET_USER}"
 fi
 
 if [[ "${FIX_GAMES_PERMISSIONS}" == "true" ]]; then
   if mountpoint -q /games; then
     section "Configure /games"
-    chown -R "${TARGET_USER}:${TARGET_USER}" /games
+    chown "${TARGET_USER}:${TARGET_USER}" /games
     chmod 755 /games
   else
     warn "/games not mounted, skipping permissions fix"
@@ -196,13 +209,21 @@ fi
 if [[ "${LABEL_BTRFS}" == "true" ]]; then
   section "Set Btrfs labels"
 
+  if [[ "$(findmnt -no FSTYPE / 2>/dev/null)" == "btrfs" ]]; then
+    btrfs filesystem label / fedora || true
+  else
+    warn "/ is not Btrfs, skipping root label"
+  fi
+
   if mountpoint -q /games; then
-    btrfs filesystem label /games games || true
+    if [[ "$(findmnt -no FSTYPE /games 2>/dev/null)" == "btrfs" ]]; then
+      btrfs filesystem label /games games || true
+    else
+      warn "/games is not Btrfs, skipping /games label"
+    fi
   else
     warn "/games not mounted, skipping /games label"
   fi
-
-  btrfs filesystem label / fedora || true
 fi
 
 if [[ "${INSTALL_VIRT}" == "true" ]]; then
@@ -224,14 +245,31 @@ fi
 
 if [[ "${INSTALL_NVIDIA}" == "true" ]]; then
   section "NVIDIA drivers"
+
+  if command -v mokutil &>/dev/null && mokutil --sb-state 2>/dev/null | grep -qi "enabled"; then
+    warn "Secure Boot is enabled. NVIDIA may not load unless akmods signing/MOK enrolment is configured."
+  fi
+
   dnf -y install akmod-nvidia xorg-x11-drv-nvidia-cuda
 
   section "Force NVIDIA akmod build"
-  akmods --force || true
-  dracut --force || true
+  akmods --force || warn "akmods build reported an issue"
+
+  section "Waiting for NVIDIA module"
+  for i in {1..30}; do
+    if modinfo nvidia &>/dev/null; then
+      echo "NVIDIA module is available."
+      break
+    fi
+
+    echo "Waiting for NVIDIA module build... ${i}/30"
+    sleep 10
+  done
+
+  dracut --force || warn "dracut reported an issue"
 
   section "Checking NVIDIA module"
-  modinfo -F version nvidia || warn "NVIDIA module not ready yet. Wait a few minutes before rebooting."
+  modinfo -F version nvidia || warn "NVIDIA module still not ready. Wait a few minutes before rebooting."
 else
   warn "Skipping NVIDIA because INSTALL_NVIDIA=false"
 fi
