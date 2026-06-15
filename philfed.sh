@@ -219,6 +219,8 @@ dnf -y install \
 
 section "Brave Origin"
 
+dnf -y install dnf-plugins-core
+
 dnf -y config-manager addrepo \
   --from-repofile=https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
 
