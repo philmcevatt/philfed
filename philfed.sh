@@ -127,6 +127,7 @@ dnf -y install \
   kdegraphics-thumbnailers \
   kirigami \
   qqc2-desktop-style \
+  qt6-qtdeclarative \
   kio-admin
 
 ############################################################
@@ -201,13 +202,27 @@ dnf -y install \
 
 ############################################################
 # WEB AND INTERNET
-# Browser and download tools.
+# Browsers and download tools.
 ############################################################
 
 section "Web and internet"
+
 dnf -y install \
   firefox \
+  chromium \
   qbittorrent
+
+############################################################
+# BRAVE ORIGIN
+# Optional stripped-down Brave browser from Brave's RPM repo.
+############################################################
+
+section "Brave Origin"
+
+dnf -y config-manager addrepo \
+  --from-repofile=https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
+
+dnf -y install brave-origin
 
 ############################################################
 # MULTIMEDIA CODECS
