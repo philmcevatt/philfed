@@ -270,7 +270,6 @@ dnf -y install \
   steam \
   lutris \
   protontricks \
-  wine \
   winetricks
 
 ############################################################
@@ -421,7 +420,7 @@ fi
 
 ############################################################
 # HARDWARE SUPPORT
-# Optional hardware-specific enhancements.
+# Audeze Maxwell USB Dongle Fix.
 ############################################################
 
 if [[ "${INSTALL_MAXWELL_FIX}" == "true" ]]; then
@@ -467,6 +466,11 @@ EOF
 else
   warn "Skipping Audeze Maxwell fix because INSTALL_MAXWELL_FIX=false"
 fi
+
+############################################################
+# HARDWARE SUPPORT
+# Openrazer.
+############################################################
 
 if [[ "${INSTALL_OPENRAZER}" == "true" ]]; then
   section "OpenRazer and Polychromatic"
