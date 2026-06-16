@@ -120,6 +120,7 @@ dnf -y install \
   kwalletmanager5 \
   pam-kwallet \
   systemsettings \
+  plasma-systemmonitor \
   kinfocenter \
   kdialog \
   breeze-gtk \
