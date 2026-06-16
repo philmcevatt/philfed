@@ -352,6 +352,17 @@ flatpak install -y flathub com.heroicgameslauncher.hgl || warn "Heroic Flatpak f
 flatpak update -y || warn "Flatpak runtime update failed"
 
 ############################################################
+# LOCALSEND FIREWALL
+# Allows LocalSend discovery and transfers through firewalld.
+############################################################
+
+section "LocalSend firewall"
+
+firewall-cmd --add-port=53317/tcp --permanent || warn "Failed to open LocalSend TCP port"
+firewall-cmd --add-port=53317/udp --permanent || warn "Failed to open LocalSend UDP port"
+firewall-cmd --reload || warn "Failed to reload firewall"
+
+############################################################
 # USER SHELL
 # Sets fish as the default shell for the normal user.
 ############################################################
@@ -379,10 +390,30 @@ fi
 if [[ "${LABEL_BTRFS}" == "true" ]]; then
   section "Set Btrfs labels"
 
-  if [[ "$(findmnt -no FSTYPE / 2>/dev/null)" == "btrfs" ]]; then
+  ROOT_FSTYPE=$(findmnt -no FSTYPE / 2>/dev/null)
+  ROOT_UUID=$(findmnt -no UUID / 2>/dev/null)
+
+  if [[ "$ROOT_FSTYPE" == "btrfs" ]]; then
     btrfs filesystem label / fedora || true
   else
-    warn "/ is not Btrfs, skipping root label"
+    warn "/ is not Btrfs, skipping / label"
+  fi
+
+  if mountpoint -q /home; then
+    HOME_FSTYPE=$(findmnt -no FSTYPE /home 2>/dev/null)
+    HOME_UUID=$(findmnt -no UUID /home 2>/dev/null)
+
+    if [[ "$HOME_FSTYPE" == "btrfs" ]]; then
+      if [[ "$HOME_UUID" != "$ROOT_UUID" ]]; then
+        btrfs filesystem label /home home || true
+      else
+        warn "/home is on the same Btrfs filesystem as /, skipping /home label"
+      fi
+    else
+      warn "/home is not Btrfs, skipping /home label"
+    fi
+  else
+    warn "/home not separately mounted, skipping /home label"
   fi
 
   if mountpoint -q /games; then
@@ -554,6 +585,41 @@ systemctl disable NetworkManager-wait-online.service || true
 section "Cleanup"
 dnf -y autoremove || true
 dnf -y clean all || true
+
+############################################################
+# HOSTNAME
+# Optionally set a custom hostname.
+############################################################
+
+section "Hostname"
+
+CURRENT_HOSTNAME=$(hostname)
+
+echo
+echo "Current name of this computer: $CURRENT_HOSTNAME"
+echo
+echo "Please choose a name for your computer and press Enter."
+echo "Or just press Enter to keep '$CURRENT_HOSTNAME'."
+echo
+echo "Names may contain letters, numbers and hyphens (-)."
+echo "Spaces are not allowed."
+echo
+
+while true; do
+    read -rp "Computer name: " HOSTNAME
+
+    # Blank input keeps current hostname
+    [[ -z "$HOSTNAME" ]] && break
+
+    if [[ "$HOSTNAME" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$ ]]; then
+        hostnamectl set-hostname "$HOSTNAME" || warn "Failed to set hostname"
+        echo "Computer name set to: $HOSTNAME"
+        break
+    else
+        warn "Invalid hostname. Use only letters, numbers, hyphens and no spaces."
+        echo "Please try again."
+    fi
+done
 
 ############################################################
 # COMPLETE
