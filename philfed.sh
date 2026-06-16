@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# PhilFed v4.1
+# PhilFed v4.3
 # Fedora Everything -> Minimal Install -> TTY -> KDE Gaming Desktop
 #
 # Run with:
@@ -349,6 +349,7 @@ flatpak install -y flathub dev.vencord.Vesktop || warn "Vesktop Flatpak failed"
 flatpak install -y flathub org.localsend.localsend_app || warn "LocalSend Flatpak failed"
 flatpak install -y flathub com.github.tchx84.Flatseal || warn "Flatseal Flatpak failed"
 flatpak install -y flathub com.heroicgameslauncher.hgl || warn "Heroic Flatpak failed"
+flatpak update -y || warn "Flatpak runtime update failed"
 
 ############################################################
 # USER SHELL
