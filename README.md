@@ -25,3 +25,5 @@ reboot
 /           150GB Btrfs
 
 /games      remainder Btrfs
+
+Leave @100gb free for distro testing
