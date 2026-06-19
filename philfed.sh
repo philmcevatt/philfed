@@ -571,6 +571,14 @@ else
 fi
 
 ############################################################
+# MATH UNICODE SYMBOL SUPPORT
+# Enables Fancy characters
+############################################################
+
+ dnf -y install \
+    google-noto-sans-math-fonts
+
+############################################################
 # BOOT TWEAKS
 # Stops NetworkManager wait-online from delaying boot.
 ############################################################
