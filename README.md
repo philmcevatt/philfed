@@ -18,12 +18,14 @@ reboot
 
 # Recommended Fedora Everything partitioning:
 
-/boot/efi  1GB  FAT32
+/boot/efi    1GB        FAT32
 
-/boot      2GB  ext4
+/boot        2GB        ext4      boot flag
 
-/           150GB Btrfs
+/            100GB      Btrfs
 
-/games      remainder Btrfs
+/home        150GB      Btrfs
 
-Leave @100gb free for distro testing
+/games       remainder  Btrfs
+
+Unallocated  ~100GB free for distro testing
