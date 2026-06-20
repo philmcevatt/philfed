@@ -144,6 +144,7 @@ dnf -y install \
   kolourpaint \
   konsole \
   kscreen \
+  kde-partitionmanager \
   gwenview \
   okular \
   spectacle \
