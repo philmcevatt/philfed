@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# PhilFed v4.5
+# PhilFed v4.6
 # Fedora Everything -> Minimal Install -> TTY -> KDE Gaming Desktop
 #
 # Run with:
@@ -92,6 +92,20 @@ dnf -y upgrade --refresh
 
 section "Enable Cisco OpenH264"
 dnf config-manager setopt fedora-cisco-openh264.enabled=1 || true
+
+############################################################
+# DNF 5 local settings
+# Allows more package max_parallel_downloads
+# fastestmirror looks for nearby/low-latency mirrors
+############################################################
+
+mkdir -p /etc/dnf/libdnf5.conf.d
+
+tee /etc/dnf/libdnf5.conf.d/80-local.conf >/dev/null <<'EOF'
+[main]
+max_parallel_downloads=10
+fastestmirror=True
+EOF
 
 ############################################################
 # KDE CORE
@@ -227,6 +241,15 @@ dnf -y config-manager addrepo \
   --from-repofile=https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
 
 dnf -y install brave-origin
+
+############################################################
+# Waterfox Browser
+# Firefox-based browser via Fedora COPR.
+# Less aggressive than LibreWolf, allows DRM content on win
+############################################################
+
+dnf -y copr enable deltacopy/waterfox
+dnf -y install waterfox
 
 ############################################################
 # MULTIMEDIA CODECS
