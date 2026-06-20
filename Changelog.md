@@ -1,4 +1,42 @@
-# v4.5 - added
+# PhilFed Changelog
+
+## v4.6
+
+### Added
+- DNF 5 performance configuration
+  - max_parallel_downloads=10
+  - fastestmirror=True
+
+- Waterfox browser
+  - Installed from COPR repository
+  - Alternative browser option alongside Firefox and Brave
+
+### Changed
+- None
+
+### Fixed
+- None
+
+### Notes
+- Parallel downloads increased from Fedora default (3) to improve update speed.
+- Waterfox added after positive testing on Fedora 44 KDE.
+
+
+
+## v4.5
+
+### Added
+- Hostname selector with validation and fallback.
+- KDE Partition Manager.
+- google-noto-sans-math-fonts.
+
+### Notes
+- Math font package enables proper display of mathematical Unicode symbols.
+
+
+
+
+# v4.6 - added
 - sudo dnf install kde-partitionmanager
 
 # v4.5 - Added:
