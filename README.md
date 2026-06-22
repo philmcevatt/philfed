@@ -9,6 +9,10 @@ sudo dnf install -y wget
 
 wget https://raw.githubusercontent.com/philmcevatt/philfed/main/philfed.sh
 
+or
+
+wget https://tinyurl.com/philfedsh
+
 chmod +x philfed.sh
 
 sudo ./philfed.sh
