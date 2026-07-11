@@ -15,11 +15,11 @@ exec 2>&1
 # TOGGLES
 ############################################################
 
-INSTALL_NVIDIA=false
+INSTALL_NVIDIA=true
 INSTALL_VIRT=true
 INSTALL_MAXWELL_FIX=true
-INSTALL_OPENRAZER=false
-FIX_GAMES_PERMISSIONS=false
+INSTALL_OPENRAZER=true
+FIX_GAMES_PERMISSIONS=true
 LABEL_BTRFS=true
 
 ############################################################
