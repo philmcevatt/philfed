@@ -14,7 +14,7 @@ exec 2>&1
 # TOGGLES
 ############################################################
 
-INSTALL_NVIDIA=true
+INSTALL_NVIDIA=false
 INSTALL_VIRT=true
 INSTALL_MAXWELL_FIX=true
 INSTALL_OPENRAZER=true
