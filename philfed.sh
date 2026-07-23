@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# PhilFed v4.6
+# PhilFed v4.8
 # Fedora Everything -> Minimal Install -> TTY -> KDE Gaming Desktop
-#
-# Run with:
-#   sudo bash philfed.sh
+# Optimized for 9950X3D + RTX 4090
+# Gemini version
 
 LOGFILE="/var/log/philfed.log"
 exec > >(tee -a "$LOGFILE")
@@ -57,50 +56,13 @@ FEDORA_VERSION="$(rpm -E %fedora)"
 section "Environment"
 echo "Fedora Version: ${FEDORA_VERSION}"
 echo "Target User: ${TARGET_USER}"
-echo "Install NVIDIA: ${INSTALL_NVIDIA}"
-echo "Install Virt: ${INSTALL_VIRT}"
-echo "Install Maxwell Fix: ${INSTALL_MAXWELL_FIX}"
-echo "Install OpenRazer: ${INSTALL_OPENRAZER}"
-echo "Fix /games permissions: ${FIX_GAMES_PERMISSIONS}"
-echo "Label Btrfs filesystems: ${LABEL_BTRFS}"
 
 ############################################################
-# BASE SYSTEM
-# Update the minimal Fedora install and add basic CLI tools.
+# DNF 5 CONFIG (Pushed to start for max download speeds)
 ############################################################
 
-section "Base update and core tools"
-dnf -y upgrade --refresh
-dnf -y install dnf-plugins-core curl wget git nano vim
-
-############################################################
-# RPM FUSION
-# Enables non-free/free repositories for NVIDIA, Steam, codecs, etc.
-############################################################
-
-section "Enable RPM Fusion"
-dnf -y install \
-  "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_VERSION}.noarch.rpm" \
-  "https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VERSION}.noarch.rpm"
-
-dnf -y upgrade --refresh
-
-############################################################
-# CISCO OPENH264
-# Enables Fedora's Cisco OpenH264 repository.
-############################################################
-
-section "Enable Cisco OpenH264"
-dnf config-manager setopt fedora-cisco-openh264.enabled=1 || true
-
-############################################################
-# DNF 5 local settings
-# Allows more package max_parallel_downloads
-# fastestmirror looks for nearby/low-latency mirrors
-############################################################
-
+section "Optimizing DNF 5"
 mkdir -p /etc/dnf/libdnf5.conf.d
-
 tee /etc/dnf/libdnf5.conf.d/80-local.conf >/dev/null <<'EOF'
 [main]
 max_parallel_downloads=10
@@ -108,12 +70,30 @@ fastestmirror=True
 EOF
 
 ############################################################
-# KDE CORE
-# Core Plasma desktop, login manager, software centre,
-# networking/audio applets and Flatpak integration.
+# BASE SYSTEM
 ############################################################
 
-section "KDE Core"
+section "Base update and core tools"
+dnf -y upgrade --refresh
+dnf -y install dnf-plugins-core curl wget git nano vim
+
+############################################################
+# RPM FUSION & REPOS
+############################################################
+
+section "Enable Repositories (RPM Fusion & Cisco)"
+dnf -y install \
+  "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_VERSION}.noarch.rpm" \
+  "https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VERSION}.noarch.rpm"
+
+dnf config-manager setopt fedora-cisco-openh264.enabled=1 || true
+dnf -y upgrade --refresh
+
+############################################################
+# KDE CORE & LOGIN MANAGER
+############################################################
+
+section "KDE Core & Plasma Login Manager"
 dnf -y install \
   plasma-desktop \
   plasma-login-manager \
@@ -123,283 +103,119 @@ dnf -y install \
   plasma-nm \
   plasma-pa
 
-############################################################
-# KDE INTEGRATION AND POLISH
-# KDE settings, admin tools, wallet integration,
-# GTK theming, dialogs and thumbnail support.
-############################################################
-
-section "KDE Integration and polish"
-dnf -y install \
-  kwalletmanager5 \
-  pam-kwallet \
-  systemsettings \
-  plasma-systemmonitor \
-  kinfocenter \
-  kdialog \
-  breeze-gtk \
-  kde-gtk-config \
-  kdegraphics-thumbnailers \
-  kirigami \
-  qqc2-desktop-style \
-  qt6-qtdeclarative \
-  kio-admin
-
-############################################################
-# KDE APPLICATIONS
-# Core KDE desktop apps.
-############################################################
-
-section "KDE Applications"
-dnf -y install \
-  dolphin \
-  kate \
-  kcalc \
-  kolourpaint \
-  konsole \
-  kscreen \
-  kde-partitionmanager \
-  gwenview \
-  okular \
-  spectacle \
-  ark \
-  filelight
-
-############################################################
-# PLASMA LOGIN MANAGER
-# Enables the Fedora 44 Plasma Login Manager and boots to GUI.
-############################################################
-
 section "Enable Plasma Login Manager"
 systemctl disable sddm gdm lightdm 2>/dev/null || true
 systemctl enable --force plasmalogin.service
 systemctl set-default graphical.target
 
 ############################################################
-# AUDIO STACK
-# PipeWire, PulseAudio compatibility, WirePlumber and ALSA tools.
+# KDE POLISH & APPLICATIONS
 ############################################################
 
-section "Audio stack"
+section "KDE Integration and Applications"
 dnf -y install \
-  pipewire \
-  pipewire-pulseaudio \
-  wireplumber \
-  alsa-utils
+  kwalletmanager5 pam-kwallet systemsettings plasma-systemmonitor kinfocenter kdialog \
+  breeze-gtk kde-gtk-config kdegraphics-thumbnailers kirigami qqc2-desktop-style \
+  qt6-qtdeclarative kio-admin dolphin kate kcalc kolourpaint konsole kscreen \
+  kde-partitionmanager gwenview okular spectacle ark filelight
 
 ############################################################
-# NETWORKING AND BLUETOOTH
-# WiFi, NetworkManager and Bluetooth support.
+# AUDIO, NETWORK, FIRMWARE
 ############################################################
 
-section "Networking and Bluetooth"
+section "Audio, Networking & Firmware"
 dnf -y install \
-  NetworkManager \
-  NetworkManager-wifi \
-  wpa_supplicant \
-  bluedevil \
-  bluez \
-  bluez-tools
+  pipewire pipewire-pulseaudio wireplumber alsa-utils \
+  NetworkManager NetworkManager-wifi wpa_supplicant bluedevil bluez bluez-tools \
+  linux-firmware iwlwifi-dvm-firmware iwlwifi-mvm-firmware iwlwifi-mld-firmware
 
-systemctl enable NetworkManager
-systemctl enable bluetooth
+systemctl enable NetworkManager bluetooth
 
 ############################################################
-# FIRMWARE
-# General firmware plus Intel WiFi firmware.
+# BROWSERS
 ############################################################
 
-section "Firmware"
-dnf -y install \
-  linux-firmware \
-  iwlwifi-dvm-firmware \
-  iwlwifi-mvm-firmware \
-  iwlwifi-mld-firmware
+section "Browsers"
+dnf -y install firefox chromium qbittorrent
 
-############################################################
-# WEB AND INTERNET
-# Browsers and download tools.
-############################################################
+# Brave
+dnf -y config-manager addrepo --from-repofile=https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
+dnf -y install brave-origin || warn "Brave Origin install failed"
 
-section "Web and internet"
-
-dnf -y install \
-  firefox \
-  chromium \
-  qbittorrent
-
-############################################################
-# BRAVE ORIGIN
-# Optional stripped-down Brave browser from Brave's RPM repo.
-############################################################
-
-section "Brave Origin"
-
-dnf -y install dnf-plugins-core
-
-dnf -y config-manager addrepo \
-  --from-repofile=https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
-
-dnf -y install brave-origin
-
-############################################################
-# Waterfox Browser
-# Firefox-based browser via Fedora COPR.
-# Less aggressive than LibreWolf, allows DRM content on win
-############################################################
-
+# Waterfox COPR
 dnf -y copr enable deltacopy/waterfox
-dnf -y install waterfox
+dnf -y install waterfox || warn "Waterfox install failed"
 
 ############################################################
-# MULTIMEDIA CODECS
-# Replaces Fedora ffmpeg-free with RPM Fusion ffmpeg,
-# then installs common codec support.
+# CODECS & MEDIA
 ############################################################
 
-section "Multimedia and codecs"
+section "Multimedia and Codecs"
 dnf -y swap ffmpeg-free ffmpeg --allowerasing || true
-
 dnf -y group upgrade multimedia --setopt="install_weak_deps=False" --exclude=PackageKit-gstreamer-plugin || true
-
 dnf -y install \
-  ffmpeg-libs \
-  libva \
-  libva-utils \
-  gstreamer1-plugins-base \
-  gstreamer1-plugins-good \
-  gstreamer1-plugins-bad-free \
-  gstreamer1-plugins-bad-freeworld \
-  gstreamer1-plugins-ugly \
-  gstreamer1-libav \
-  openh264 \
-  gstreamer1-plugin-openh264 \
-  mozilla-openh264
+  ffmpeg-libs libva libva-utils gstreamer1-plugins-base gstreamer1-plugins-good \
+  gstreamer1-plugins-bad-free gstreamer1-plugins-bad-freeworld gstreamer1-plugins-ugly \
+  gstreamer1-libav openh264 gstreamer1-plugin-openh264 mozilla-openh264 \
+  vlc vlc-plugins-base vlc-plugins-freeworld
 
 ############################################################
-# MEDIA PLAYBACK
-# VLC and extra VLC plugin support.
+# GAMING PLATFORM & GRAPHICS (9950X3D / 4090)
 ############################################################
 
-section "Media playback"
+section "Gaming platform & Drivers"
 dnf -y install \
-  vlc \
-  vlc-plugins-base \
-  vlc-plugins-freeworld
+  steam lutris protontricks winetricks gamemode gamescope goverlay mangohud \
+  mesa-dri-drivers mesa-vulkan-drivers vulkan-loader kernel-modules-extra
 
 ############################################################
-# GAMING PLATFORM
-# Steam, Lutris, Wine and Proton helper tools.
+# CONTENT CREATION & OFFICE (With Autocorrect Fix)
 ############################################################
 
-section "Gaming platform"
+section "Content Creation & Office"
 dnf -y install \
-  steam \
-  lutris \
-  protontricks \
-  winetricks
+  obs-studio kdenlive \
+  libreoffice-writer libreoffice-calc libreoffice-langpack-en hunspell-en hunspell-en-GB autocorr-en
 
 ############################################################
-# GAMING PERFORMANCE AND GRAPHICS
-# GameMode, Gamescope, MangoHud, Vulkan and Mesa drivers.
+# SYSTEM UTILITIES & FONTS
 ############################################################
 
-section "Gaming performance and graphics"
+section "System Utilities & Math Fonts"
 dnf -y install \
-  gamemode \
-  gamescope \
-  goverlay \
-  mangohud \
-  mesa-dri-drivers \
-  mesa-vulkan-drivers \
-  vulkan-loader \
-  kernel-modules-extra
-
-############################################################
-# CONTENT CREATION
-# Recording, streaming and video editing.
-############################################################
-
-section "Content creation"
-dnf -y install \
-  obs-studio \
-  kdenlive
-
-############################################################
-# OFFICE
-# Basic LibreOffice tools.
-############################################################
-
-section "Office"
-dnf -y install \
-  libreoffice-writer \
-  libreoffice-calc
-
-############################################################
-# SYSTEM UTILITIES
-# Monitoring, shell, storage tools, Btrfs tools and archives.
-############################################################
-
-section "System utilities"
-dnf -y install \
-  btop \
-  nvtop \
-  fastfetch \
-  fish \
-  gnome-disk-utility \
-  btrfs-assistant \
-  snapper \
-  unzip \
-  p7zip \
-  p7zip-plugins \
-  unrar
-
-############################################################
-# FLATPAK AND FLATHUB
-# Enables Flatpak support and the Flathub remote.
-############################################################
-
-section "Flatpak and Flathub"
-dnf -y install flatpak
-flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo || true
+  btop nvtop fastfetch fish gnome-disk-utility btrfs-assistant snapper \
+  unzip p7zip p7zip-plugins unrar google-noto-sans-math-fonts
 
 ############################################################
 # FLATPAK APPS
-# Apps preferred from Flathub.
 ############################################################
 
 section "Flatpak apps"
+dnf -y install flatpak
+flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo || true
+
 flatpak install -y flathub com.vysp3r.ProtonPlus || warn "ProtonPlus Flatpak failed"
 flatpak install -y flathub dev.vencord.Vesktop || warn "Vesktop Flatpak failed"
 flatpak install -y flathub org.localsend.localsend_app || warn "LocalSend Flatpak failed"
 flatpak install -y flathub com.github.tchx84.Flatseal || warn "Flatseal Flatpak failed"
 flatpak install -y flathub com.heroicgameslauncher.hgl || warn "Heroic Flatpak failed"
-flatpak update -y || warn "Flatpak runtime update failed"
 
-############################################################
-# LOCALSEND FIREWALL
-# Allows LocalSend discovery and transfers through firewalld.
-############################################################
-
-section "LocalSend firewall"
-
-firewall-cmd --add-port=53317/tcp --permanent || warn "Failed to open LocalSend TCP port"
-firewall-cmd --add-port=53317/udp --permanent || warn "Failed to open LocalSend UDP port"
-firewall-cmd --reload || warn "Failed to reload firewall"
+# LocalSend Firewall
+firewall-cmd --add-port=53317/tcp --permanent || true
+firewall-cmd --add-port=53317/udp --permanent || true
+firewall-cmd --reload || true
 
 ############################################################
 # USER SHELL
-# Sets fish as the default shell for the normal user.
 ############################################################
 
-section "Set fish as shell for ${TARGET_USER}"
+section "Set fish shell for ${TARGET_USER}"
 if [[ -x /usr/bin/fish ]]; then
   chsh -s /usr/bin/fish "${TARGET_USER}" || warn "Could not set fish shell for ${TARGET_USER}"
 fi
 
 ############################################################
 # FILESYSTEM CONFIGURATION
-# Fixes /games ownership and labels Btrfs filesystems if present.
 ############################################################
 
 if [[ "${FIX_GAMES_PERMISSIONS}" == "true" ]]; then
@@ -414,89 +230,52 @@ fi
 
 if [[ "${LABEL_BTRFS}" == "true" ]]; then
   section "Set Btrfs labels"
-
   ROOT_FSTYPE=$(findmnt -no FSTYPE / 2>/dev/null)
   ROOT_UUID=$(findmnt -no UUID / 2>/dev/null)
 
   if [[ "$ROOT_FSTYPE" == "btrfs" ]]; then
     btrfs filesystem label / fedora || true
-  else
-    warn "/ is not Btrfs, skipping / label"
   fi
 
   if mountpoint -q /home; then
     HOME_FSTYPE=$(findmnt -no FSTYPE /home 2>/dev/null)
     HOME_UUID=$(findmnt -no UUID /home 2>/dev/null)
-
-    if [[ "$HOME_FSTYPE" == "btrfs" ]]; then
-      if [[ "$HOME_UUID" != "$ROOT_UUID" ]]; then
-        btrfs filesystem label /home home || true
-      else
-        warn "/home is on the same Btrfs filesystem as /, skipping /home label"
-      fi
-    else
-      warn "/home is not Btrfs, skipping /home label"
+    if [[ "$HOME_FSTYPE" == "btrfs" && "$HOME_UUID" != "$ROOT_UUID" ]]; then
+      btrfs filesystem label /home home || true
     fi
-  else
-    warn "/home not separately mounted, skipping /home label"
   fi
 
   if mountpoint -q /games; then
     if [[ "$(findmnt -no FSTYPE /games 2>/dev/null)" == "btrfs" ]]; then
       btrfs filesystem label /games games || true
-    else
-      warn "/games is not Btrfs, skipping /games label"
     fi
-  else
-    warn "/games not mounted, skipping /games label"
   fi
 fi
 
 ############################################################
 # VIRTUALISATION
-# Virt-Manager, libvirt, QEMU/KVM, OVMF and TPM support.
 ############################################################
 
 if [[ "${INSTALL_VIRT}" == "true" ]]; then
   section "Virtualisation stack"
-
-  dnf -y install \
-    virt-manager \
-    libvirt \
-    libvirt-daemon-config-network \
-    libvirt-daemon-kvm \
-    qemu-kvm \
-    virt-install \
-    virt-viewer \
-    edk2-ovmf \
-    swtpm || true
-
+  dnf -y install virt-manager libvirt libvirt-daemon-config-network libvirt-daemon-kvm qemu-kvm virt-install virt-viewer edk2-ovmf swtpm || true
   systemctl enable --now libvirtd || true
   usermod -aG libvirt "${TARGET_USER}" || true
-else
-  warn "Skipping virtualisation because INSTALL_VIRT=false"
 fi
 
 ############################################################
-# HARDWARE SUPPORT
-# Audeze Maxwell USB Dongle Fix.
+# HARDWARE FIXES (Audeze Maxwell & OpenRazer)
 ############################################################
 
 if [[ "${INSTALL_MAXWELL_FIX}" == "true" ]]; then
-  section "Audeze Maxwell USB dongle reset fix"
-
+  section "Audeze Maxwell USB dongle fix"
   dnf -y install usbutils
-
   if command -v usbreset &>/dev/null; then
     cat > /usr/local/bin/reset-maxwell.sh <<'EOF'
 #!/usr/bin/env bash
-# Reset Audeze Maxwell USB dongle before shutdown/reboot.
-# This helps Windows detect the dongle cleanly after switching from Linux.
-
 sleep 2
 /usr/bin/usbreset 3329:4B19 || true
 EOF
-
     chmod +x /usr/local/bin/reset-maxwell.sh
 
     cat > /etc/systemd/system/maxwell-reset.service <<'EOF'
@@ -514,62 +293,26 @@ TimeoutStartSec=5
 [Install]
 WantedBy=poweroff.target reboot.target halt.target
 EOF
-
     systemctl daemon-reload
     systemctl enable maxwell-reset.service
-
-    echo "Audeze Maxwell reset service installed and enabled."
-  else
-    warn "usbreset not found even after installing usbutils. Skipping Maxwell reset service."
   fi
-else
-  warn "Skipping Audeze Maxwell fix because INSTALL_MAXWELL_FIX=false"
 fi
-
-############################################################
-# HARDWARE SUPPORT
-# Openrazer.
-############################################################
 
 if [[ "${INSTALL_OPENRAZER}" == "true" ]]; then
   section "OpenRazer and Polychromatic"
-
   dnf -y install kernel-devel
-
-  dnf config-manager addrepo \
-    --from-repofile=https://openrazer.github.io/hardware:razer.repo || true
-
-  dnf -y install \
-    openrazer-meta \
-    polychromatic
-
-  systemctl daemon-reload || true
-
+  dnf config-manager addrepo --from-repofile=https://openrazer.github.io/hardware:razer.repo || true
+  dnf -y install openrazer-meta polychromatic
   groupadd -f plugdev
   gpasswd -a "${TARGET_USER}" plugdev
-
-  sudo -u "${TARGET_USER}" systemctl --user enable openrazer-daemon.service || true
-
-  echo "OpenRazer installed."
-  echo "User added to plugdev group."
-  echo "Reboot or log out/in before using Polychromatic."
-else
-  warn "Skipping OpenRazer because INSTALL_OPENRAZER=false"
 fi
 
 ############################################################
-# NVIDIA
-# Installs RPM Fusion NVIDIA drivers, warns about Secure Boot,
-# builds akmods and regenerates initramfs.
+# NVIDIA DRIVERS (RTX 4090)
 ############################################################
 
 if [[ "${INSTALL_NVIDIA}" == "true" ]]; then
   section "NVIDIA drivers"
-
-  if command -v mokutil &>/dev/null && mokutil --sb-state 2>/dev/null | grep -qi "enabled"; then
-    warn "Secure Boot is enabled. NVIDIA may not load unless akmods signing/MOK enrolment is configured."
-  fi
-
   dnf -y install akmod-nvidia xorg-x11-drv-nvidia-cuda
 
   section "Force NVIDIA akmod build"
@@ -581,84 +324,40 @@ if [[ "${INSTALL_NVIDIA}" == "true" ]]; then
       echo "NVIDIA module is available."
       break
     fi
-
     echo "Waiting for NVIDIA module build... ${i}/30"
-    sleep 10
+    sleep 5
   done
 
   dracut --force || warn "dracut reported an issue"
-
-  section "Checking NVIDIA module"
-  modinfo -F version nvidia || warn "NVIDIA module still not ready. Wait a few minutes before rebooting."
-else
-  warn "Skipping NVIDIA because INSTALL_NVIDIA=false"
 fi
 
 ############################################################
-# MATH UNICODE SYMBOL SUPPORT
-# Enables Fancy characters
+# BOOT TWEAKS & CLEANUP
 ############################################################
 
- dnf -y install \
-    google-noto-sans-math-fonts
-
-############################################################
-# BOOT TWEAKS
-# Stops NetworkManager wait-online from delaying boot.
-############################################################
-
-section "Boot tweaks"
+section "Boot tweaks and Cleanup"
 systemctl disable NetworkManager-wait-online.service || true
-
-############################################################
-# CLEANUP
-# Removes unused packages and clears package cache.
-############################################################
-
-section "Cleanup"
 dnf -y autoremove || true
 dnf -y clean all || true
 
 ############################################################
 # HOSTNAME
-# Optionally set a custom hostname.
 ############################################################
 
-section "Hostname"
-
+section "Hostname setup"
 CURRENT_HOSTNAME=$(hostname)
+echo -e "\nCurrent hostname: $CURRENT_HOSTNAME\n"
+read -rp "Enter new hostname (or press Enter to keep '$CURRENT_HOSTNAME'): " HOSTNAME
 
-echo
-echo "Current name of this computer: $CURRENT_HOSTNAME"
-echo
-echo "Please choose a name for your computer and press Enter."
-echo "Or just press Enter to keep '$CURRENT_HOSTNAME'."
-echo
-echo "Names may contain letters, numbers and hyphens (-)."
-echo "Spaces are not allowed."
-echo
-
-while true; do
-    read -rp "Computer name: " HOSTNAME
-
-    # Blank input keeps current hostname
-    [[ -z "$HOSTNAME" ]] && break
-
-    if [[ "$HOSTNAME" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$ ]]; then
-        hostnamectl set-hostname "$HOSTNAME" || warn "Failed to set hostname"
-        echo "Computer name set to: $HOSTNAME"
-        break
-    else
-        warn "Invalid hostname. Use only letters, numbers, hyphens and no spaces."
-        echo "Please try again."
-    fi
-done
-
-############################################################
-# COMPLETE
-############################################################
+if [[ -n "$HOSTNAME" ]]; then
+  if [[ "$HOSTNAME" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$ ]]; then
+    hostnamectl set-hostname "$HOSTNAME"
+    echo "Hostname updated to: $HOSTNAME"
+  else
+    warn "Invalid hostname format. Keeping $CURRENT_HOSTNAME"
+  fi
+fi
 
 section "Complete"
-echo "Bootstrap finished."
-echo "Reboot with:"
-echo "sudo reboot"
+echo "Bootstrap finished cleanly!"
+echo "Reboot with: sudo reboot"
