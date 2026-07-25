@@ -660,4 +660,4 @@ done
 section "Complete"
 echo "Bootstrap finished."
 echo "Reboot with:"
-echo "sudo reboot"#!/usr/bin/env bash
+echo "sudo reboot"
