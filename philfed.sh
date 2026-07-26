@@ -348,7 +348,10 @@ dnf -y install \
 section "Office"
 dnf -y install \
   libreoffice-writer \
-  libreoffice-calc
+  libreoffice-calc \
+  libreoffice-langpack-en \
+  hunspell-en \
+  autocorr-en
 
 ############################################################
 # SYSTEM UTILITIES
@@ -469,6 +472,8 @@ fi
 ############################################################
 # VIRTUALISATION
 # Virt-Manager, libvirt, QEMU/KVM, OVMF and TPM support.
+# Only installed when INSTALL_VIRT=true, since this is host-side
+# tooling for running VMs, not guest-side tooling.
 ############################################################
 
 if [[ "${INSTALL_VIRT}" == "true" ]]; then
@@ -489,6 +494,27 @@ if [[ "${INSTALL_VIRT}" == "true" ]]; then
   usermod -aG libvirt "${TARGET_USER}" || true
 else
   warn "Skipping virtualisation because INSTALL_VIRT=false"
+fi
+
+############################################################
+# VM GUEST DETECTION
+# Installs spice-vdagent only if this install is itself
+# running as a VM guest (bare metal desktop/laptop skips this).
+############################################################
+
+section "VM guest detection"
+
+VIRT_TYPE="$(systemd-detect-virt || true)"
+
+if [[ "${VIRT_TYPE}" != "none" ]]; then
+  echo "Detected VM guest environment: ${VIRT_TYPE}"
+  section "Installing SPICE guest agent"
+
+  dnf -y install spice-vdagent
+
+  systemctl enable --now spice-vdagentd.service || warn "Could not enable spice-vdagentd.service"
+else
+  echo "Bare metal install detected. Skipping spice-vdagent."
 fi
 
 ############################################################
