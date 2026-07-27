@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Linux Gamer Life openSUSE Bootstrap (TTY friendly)
-# Goal: Start from openSUSE minimal server (TTY), run once, reboot into KDE Plasma.
+# openSUSE Bootstrap
+# Start from openSUSE minimal server (TTY), run once, reboot into KDE Plasma.
 
 # -----------------------------
-# Colours (LGL style)
+# Colours
 # -----------------------------
 GREEN='\033[38;2;0;255;0m'
 ORANGE='\033[38;2;255;153;0m'
@@ -203,7 +203,7 @@ try_install \
   discover6
 
 # -----------------------------
-# AMD / Mesa stack (UPDATED for openSUSE names)
+# Mesa stack (UPDATED for openSUSE names)
 # -----------------------------
 section "AMD graphics stack"
 
@@ -212,9 +212,6 @@ try_install \
   libvulkan1 vulkan-tools \
   libva2 libva-utils \
   Mesa-libva
-
-# Vulkan ICD for AMD (install if available in your repos)
-try_install Mesa-vulkan-radeon
 
 # -----------------------------
 # Gaming tools
@@ -264,29 +261,6 @@ try_install virt-manager qemu qemu-kvm libvirt libvirt-client virt-install virt-
 systemctl enable --now libvirtd || true
 usermod -aG libvirt "${TARGET_USER}" 2>/dev/null || true
 usermod -aG kvm "${TARGET_USER}" 2>/dev/null || true
-
-# -----------------------------
-# Dev tools (Python + pipx)
-# -----------------------------
-section "Dev tools"
-
-try_install \
-  python3 \
-  python3-pip \
-  python3-virtualenv \
-  python3-pipx
-
-section "Configuring pipx for user: ${TARGET_USER}"
-sudo -u "${TARGET_USER}" python3 -m pipx ensurepath || true
-
-section "Installing pipx tools"
-sudo -u "${TARGET_USER}" python3 -m pipx install yt-dlp || true
-sudo -u "${TARGET_USER}" python3 -m pipx install tldr || true
-
-section "Quick verification"
-sudo -u "${TARGET_USER}" bash -lc '~/.local/bin/yt-dlp --version' || true
-sudo -u "${TARGET_USER}" bash -lc '~/.local/bin/tldr --version' || true
-
 
 # -----------------------------
 # Boot target
