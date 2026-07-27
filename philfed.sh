@@ -19,6 +19,8 @@ INSTALL_NVIDIA=true
 INSTALL_VIRT=true
 INSTALL_MAXWELL_FIX=true
 INSTALL_OPENRAZER=true
+INSTALL_COOLERCONTROL=true
+INSTALL_PROTONVPN=true
 FIX_GAMES_PERMISSIONS=true
 LABEL_BTRFS=true
 
@@ -61,6 +63,8 @@ echo "Install NVIDIA: ${INSTALL_NVIDIA}"
 echo "Install Virt: ${INSTALL_VIRT}"
 echo "Install Maxwell Fix: ${INSTALL_MAXWELL_FIX}"
 echo "Install OpenRazer: ${INSTALL_OPENRAZER}"
+echo "Install CoolerControl: ${INSTALL_COOLERCONTROL}"
+echo "Install ProtonVPN: ${INSTALL_PROTONVPN}"
 echo "Fix /games permissions: ${FIX_GAMES_PERMISSIONS}"
 echo "Label Btrfs filesystems: ${LABEL_BTRFS}"
 
@@ -233,7 +237,8 @@ section "Web and internet"
 dnf -y install \
   firefox \
   chromium \
-  qbittorrent
+  qbittorrent \
+  keepassxc
 
 ############################################################
 # BRAVE ORIGIN
@@ -255,6 +260,28 @@ dnf -y install brave-origin
 
 dnf -y copr enable deltacopy/waterfox
 dnf -y install waterfox
+
+############################################################
+# PROTON VPN
+# Official Proton VPN Linux GUI via Proton's Fedora repo.
+############################################################
+
+section "Proton VPN"
+
+PROTONVPN_RPM="protonvpn-stable-release-1.0.4-1.noarch.rpm"
+PROTONVPN_URL="https://repo.protonvpn.com/fedora-${FEDORA_VERSION}-stable/protonvpn-stable-release/${PROTONVPN_RPM}"
+
+wget -O "/tmp/${PROTONVPN_RPM}" "${PROTONVPN_URL}"
+
+dnf -y install "/tmp/${PROTONVPN_RPM}"
+
+dnf -y check-update --refresh || true
+
+dnf -y install proton-vpn-gnome-desktop
+
+rm -f "/tmp/${PROTONVPN_RPM}"
+
+echo "Proton VPN installed."
 
 ############################################################
 # MULTIMEDIA CODECS
@@ -392,6 +419,8 @@ flatpak install -y flathub dev.vencord.Vesktop || warn "Vesktop Flatpak failed"
 flatpak install -y flathub org.localsend.localsend_app || warn "LocalSend Flatpak failed"
 flatpak install -y flathub com.github.tchx84.Flatseal || warn "Flatseal Flatpak failed"
 flatpak install -y flathub com.heroicgameslauncher.hgl || warn "Heroic Flatpak failed"
+flatpak install -y flathub io.github.vikdevelop.SaveDesktop || warn "SaveDesktop Flatpak failed"
+flatpak install -y flathub org.freefilesync.FreeFileSync || warn "FreeFileSync Flatpak failed"
 
 ############################################################
 # LOCALSEND FIREWALL
@@ -595,6 +624,32 @@ if [[ "${INSTALL_OPENRAZER}" == "true" ]]; then
   echo "Reboot or log out/in before using Polychromatic."
 else
   warn "Skipping OpenRazer because INSTALL_OPENRAZER=false"
+fi
+
+############################################################
+# HARDWARE SUPPORT
+# CoolerControl - 
+# Fan, pump and cooling device monitoring/control.
+############################################################
+
+if [[ "${INSTALL_COOLERCONTROL}" == "true" ]]; then
+  section "CoolerControl"
+
+  # DNF5 COPR support
+  dnf -y install 'dnf5-command(copr)'
+
+  # CoolerControl COPR repository
+  dnf -y copr enable codifryed/CoolerControl
+
+  # CoolerControl application and daemon
+  dnf -y install coolercontrol
+
+  # Start now and automatically on boot
+  systemctl enable --now coolercontrold
+
+  echo "CoolerControl installed and daemon enabled."
+else
+  warn "Skipping CoolerControl because INSTALL_COOLERCONTROL=false"
 fi
 
 ############################################################
