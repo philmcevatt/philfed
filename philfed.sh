@@ -266,22 +266,26 @@ dnf -y install waterfox
 # Official Proton VPN Linux GUI via Proton's Fedora repo.
 ############################################################
 
-section "Proton VPN"
+if [[ "${INSTALL_PROTONVPN}" == "true" ]]; then
+  section "Proton VPN"
 
-PROTONVPN_RPM="protonvpn-stable-release-1.0.4-1.noarch.rpm"
-PROTONVPN_URL="https://repo.protonvpn.com/fedora-${FEDORA_VERSION}-stable/protonvpn-stable-release/${PROTONVPN_RPM}"
+  PROTONVPN_RPM="protonvpn-stable-release-1.0.4-1.noarch.rpm"
+  PROTONVPN_URL="https://repo.protonvpn.com/fedora-${FEDORA_VERSION}-stable/protonvpn-stable-release/${PROTONVPN_RPM}"
 
-wget -O "/tmp/${PROTONVPN_RPM}" "${PROTONVPN_URL}"
+  wget -O "/tmp/${PROTONVPN_RPM}" "${PROTONVPN_URL}"
 
-dnf -y install "/tmp/${PROTONVPN_RPM}"
+  dnf -y install "/tmp/${PROTONVPN_RPM}"
 
-dnf -y check-update --refresh || true
+  dnf -y check-update --refresh || true
 
-dnf -y install proton-vpn-gnome-desktop
+  dnf -y install proton-vpn-gnome-desktop
 
-rm -f "/tmp/${PROTONVPN_RPM}"
+  rm -f "/tmp/${PROTONVPN_RPM}"
 
-echo "Proton VPN installed."
+  echo "Proton VPN installed."
+else
+  warn "Skipping Proton VPN because INSTALL_PROTONVPN=false"
+fi
 
 ############################################################
 # MULTIMEDIA CODECS
