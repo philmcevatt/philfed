@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# PhilFed v4.8
+# PhilFed v4.9
 # Fedora Everything -> Minimal Install -> TTY -> KDE Gaming Desktop
 #
 # Run with:
