@@ -264,6 +264,8 @@ dnf -y install waterfox
 ############################################################
 # PROTON VPN
 # Official Proton VPN Linux GUI via Proton's Fedora repo.
+# Treated as non-critical so a Proton packaging/service issue
+# does not abort the rest of the Fedora bootstrap.
 ############################################################
 
 if [[ "${INSTALL_PROTONVPN}" == "true" ]]; then
@@ -271,18 +273,31 @@ if [[ "${INSTALL_PROTONVPN}" == "true" ]]; then
 
   PROTONVPN_RPM="protonvpn-stable-release-1.0.4-1.noarch.rpm"
   PROTONVPN_URL="https://repo.protonvpn.com/fedora-${FEDORA_VERSION}-stable/protonvpn-stable-release/${PROTONVPN_RPM}"
+  PROTONVPN_TMP="/tmp/${PROTONVPN_RPM}"
 
-  wget -O "/tmp/${PROTONVPN_RPM}" "${PROTONVPN_URL}"
+  if ! wget -O "${PROTONVPN_TMP}" "${PROTONVPN_URL}"; then
+    warn "Could not download the Proton VPN repository package. Continuing without Proton VPN."
 
-  dnf -y install "/tmp/${PROTONVPN_RPM}"
+  elif ! dnf -y install "${PROTONVPN_TMP}"; then
+    warn "Could not install the Proton VPN repository package. Continuing without Proton VPN."
 
-  dnf -y check-update --refresh || true
+  else
+    dnf -y check-update --refresh || true
 
-  dnf -y install proton-vpn-gnome-desktop
+    if ! dnf -y install proton-vpn-gnome-desktop; then
+      warn "Proton VPN package installation reported an error."
 
-  rm -f "/tmp/${PROTONVPN_RPM}"
+      if rpm -q proton-vpn-gnome-desktop proton-vpn-daemon &>/dev/null; then
+        warn "Proton VPN packages are installed despite the reported error. Continuing."
+      else
+        warn "Proton VPN installation did not complete. Continuing without Proton VPN."
+      fi
+    else
+      echo "Proton VPN installed."
+    fi
+  fi
 
-  echo "Proton VPN installed."
+  rm -f "${PROTONVPN_TMP}"
 else
   warn "Skipping Proton VPN because INSTALL_PROTONVPN=false"
 fi
@@ -632,7 +647,7 @@ fi
 
 ############################################################
 # HARDWARE SUPPORT
-# CoolerControl - 
+# CoolerControl -
 # Fan, pump and cooling device monitoring/control.
 ############################################################
 
