@@ -248,8 +248,14 @@ dnf -y install \
 section "Brave Origin"
 
 dnf -y install dnf-plugins-core
-dnf -y config-manager addrepo \
-  --from-repofile=https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
+
+if [[ ! -f /etc/yum.repos.d/brave-browser.repo ]]; then
+  dnf -y config-manager addrepo \
+    --from-repofile=https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
+else
+  echo "Brave repository already configured."
+fi
+
 dnf -y install brave-origin
 
 ############################################################
@@ -258,7 +264,7 @@ dnf -y install brave-origin
 # Less aggressive than LibreWolf, allows DRM content on win
 ############################################################
 
-dnf -y copr enable deltacopy/waterfox
+dnf -y copr enable deltacopy/waterfox || warn "Waterfox COPR could not be enabled or is already configured."
 dnf -y install waterfox
 
 ############################################################
