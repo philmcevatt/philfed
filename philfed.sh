@@ -174,7 +174,8 @@ dnf -y install \
   okular \
   spectacle \
   ark \
-  filelight
+  filelight \
+  kde-connect
 
 ############################################################
 # PLASMA LOGIN MANAGER
@@ -459,13 +460,52 @@ firewall-cmd --add-port=53317/udp --permanent || warn "Failed to open LocalSend 
 firewall-cmd --reload || warn "Failed to reload firewall"
 
 ############################################################
-# USER SHELL
-# Sets fish as the default shell for the normal user.
+# KDE CONNECT FIREWALL
+# Allows KDE Connect discovery and communication through
+# Fedora's public firewalld zone.
 ############################################################
 
-section "Set fish as shell for ${TARGET_USER}"
+section "KDE Connect firewall"
+
+firewall-cmd --permanent \
+  --zone=public \
+  --add-service=kdeconnect \
+  || warn "Failed to enable KDE Connect firewall service"
+
+firewall-cmd --reload \
+  || warn "Failed to reload firewall"
+
+############################################################
+# USER SHELL
+# Sets Fish as the default shell for the normal user and
+# creates standard DNF and Flatpak aliases.
+############################################################
+
+section "Set Fish as shell for ${TARGET_USER}"
+
 if [[ -x /usr/bin/fish ]]; then
-  chsh -s /usr/bin/fish "${TARGET_USER}" || warn "Could not set fish shell for ${TARGET_USER}"
+  chsh -s /usr/bin/fish "${TARGET_USER}" \
+    || warn "Could not set Fish shell for ${TARGET_USER}"
+
+  section "Configure Fish aliases"
+
+  sudo -u "${TARGET_USER}" fish -c "
+    alias --save dnfi='sudo dnf install'
+    alias --save dnfr='sudo dnf remove'
+    alias --save dnfs='dnf search'
+    alias --save dnfu='sudo dnf upgrade --refresh'
+    alias --save dnfc='sudo dnf clean all'
+    alias --save dnfl='dnf list --installed'
+    alias --save dnfq='dnf info'
+
+    alias --save fp='flatpak'
+    alias --save fpi='flatpak install'
+    alias --save fpr='flatpak uninstall'
+    alias --save fps='flatpak search'
+    alias --save fpu='flatpak update'
+  " || warn "Could not configure Fish aliases for ${TARGET_USER}"
+else
+  warn "Fish is not installed. Skipping shell configuration."
 fi
 
 ############################################################
