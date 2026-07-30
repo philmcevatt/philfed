@@ -22,7 +22,7 @@ INSTALL_OPENRAZER=true
 INSTALL_COOLERCONTROL=true
 INSTALL_PROTONVPN=true
 FIX_GAMES_PERMISSIONS=true
-LABEL_BTRFS=true
+LABEL_BTRFS=false
 
 ############################################################
 # COLOURS AND HELPERS
@@ -509,8 +509,8 @@ else
 fi
 
 ############################################################
-# FILESYSTEM CONFIGURATION
-# Fixes /games ownership and labels Btrfs filesystems if present.
+# GAMES MOUNT PERMISSIONS
+# Fixes ownership of the /games mount point.
 ############################################################
 
 if [[ "${FIX_GAMES_PERMISSIONS}" == "true" ]]; then
@@ -522,6 +522,11 @@ if [[ "${FIX_GAMES_PERMISSIONS}" == "true" ]]; then
     warn "/games not mounted, skipping permissions fix"
   fi
 fi
+
+############################################################
+# FILESYSTEM CONFIGURATION
+# Labels Btrfs filesystems if present.
+############################################################
 
 if [[ "${LABEL_BTRFS}" == "true" ]]; then
   section "Set Btrfs labels"
