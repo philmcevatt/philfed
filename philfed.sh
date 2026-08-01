@@ -1,11 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# PhilFed v4.9
+# PhilFed v5.0
 # Fedora Everything -> Minimal Install -> TTY -> KDE Gaming Desktop
 #
+# Purpose:
+# Build my preferred Fedora KDE workstation from a minimal
+# Fedora Everything installation.
+#
+# Philosophy:
+# - Keep packages deliberate and justified.
+# - Prefer KDE defaults where practical.
+# - Minimise unnecessary services and overlapping tools.
+# - Keep every section understandable and replaceable.
+#
 # Run with:
-#   sudo bash philfed.sh
+#   sudo ./philfed.sh
 
 LOGFILE="/var/log/philfed.log"
 exec > >(tee -a "$LOGFILE")
@@ -21,8 +31,10 @@ INSTALL_MAXWELL_FIX=true
 INSTALL_OPENRAZER=true
 INSTALL_COOLERCONTROL=true
 INSTALL_PROTONVPN=true
+INSTALL_PRINTING=true
+INSTALL_REMOTE_DESKTOP=false
 FIX_GAMES_PERMISSIONS=true
-LABEL_BTRFS=false
+LABEL_BTRFS=true
 
 ############################################################
 # COLOURS AND HELPERS
@@ -39,22 +51,41 @@ warn() { echo -e "${YELLOW}Warning:${RESET} $1"; }
 # SAFETY CHECKS
 ############################################################
 
+# This script must be launched from a normal user account through sudo.
 if [[ "${EUID}" -ne 0 ]]; then
-  echo "Run this with sudo:"
-  echo "sudo bash $0"
+  echo "This script must be run with sudo:"
+  echo "  sudo ./philfed.sh"
   exit 1
 fi
 
-TARGET_USER="${SUDO_USER:-$(logname 2>/dev/null || echo "")}"
+TARGET_USER="${SUDO_USER:-}"
 
 if [[ -z "${TARGET_USER}" || "${TARGET_USER}" == "root" ]]; then
   echo "Could not detect the normal user account."
-  echo "Run this as:"
-  echo "sudo bash philfed.sh"
+  echo "Do not run this from a root shell or with su."
+  echo "Run it from your normal account with:"
+  echo "  sudo ./philfed.sh"
   exit 1
 fi
 
-FEDORA_VERSION="$(rpm -E %fedora)"
+if ! id "${TARGET_USER}" &>/dev/null; then
+  echo "Detected user '${TARGET_USER}' does not exist."
+  exit 1
+fi
+
+TARGET_HOME="$(getent passwd "${TARGET_USER}" | cut -d: -f6)"
+
+if [[ -z "${TARGET_HOME}" || ! -d "${TARGET_HOME}" ]]; then
+  echo "Could not determine the home directory for '${TARGET_USER}'."
+  exit 1
+fi
+
+if [[ ! -r /etc/fedora-release ]]; then
+  echo "This script is intended for Fedora Linux only."
+  exit 1
+fi
+
+FEDORA_VERSION="$(rpm -E '%fedora')"
 
 section "Environment"
 echo "Fedora Version: ${FEDORA_VERSION}"
@@ -65,6 +96,8 @@ echo "Install Maxwell Fix: ${INSTALL_MAXWELL_FIX}"
 echo "Install OpenRazer: ${INSTALL_OPENRAZER}"
 echo "Install CoolerControl: ${INSTALL_COOLERCONTROL}"
 echo "Install ProtonVPN: ${INSTALL_PROTONVPN}"
+echo "Install printing: ${INSTALL_PRINTING}"
+echo "Install remote desktop: ${INSTALL_REMOTE_DESKTOP}"
 echo "Fix /games permissions: ${FIX_GAMES_PERMISSIONS}"
 echo "Label Btrfs filesystems: ${LABEL_BTRFS}"
 
@@ -135,8 +168,8 @@ dnf -y install \
 
 ############################################################
 # KDE INTEGRATION AND POLISH
-# KDE settings, admin tools, wallet integration,
-# GTK theming, dialogs and thumbnail support.
+# KDE settings, portals, power management, wallet integration,
+# GTK theming, browser integration and preview support.
 ############################################################
 
 section "KDE Integration and polish"
@@ -146,15 +179,33 @@ dnf -y install \
   systemsettings \
   plasma-systemmonitor \
   kinfocenter \
+  powerdevil \
   kdialog \
   breeze-gtk \
   kde-gtk-config \
+  xdg-desktop-portal-kde \
+  plasma-browser-integration \
   kdegraphics-thumbnailers \
+  ffmpegthumbs \
+  markdownpart \
   kirigami \
   qqc2-desktop-style \
   qt6-qtdeclarative \
-  kio-admin \
+  xorg-x11-server-Xwayland \
   wl-clipboard
+
+############################################################
+# DOLPHIN INTEGRATION
+# Additional protocols, admin access, plugins and
+# network-sharing controls for Dolphin.
+############################################################
+
+section "Dolphin integration"
+dnf -y install \
+  dolphin-plugins \
+  kio-extras \
+  kio-admin \
+  kdenetwork-filesharing
 
 ############################################################
 # KDE APPLICATIONS
@@ -166,6 +217,7 @@ dnf -y install \
   dolphin \
   kate \
   kcalc \
+  kcolorchooser \
   kolourpaint \
   konsole \
   kscreen \
@@ -176,6 +228,45 @@ dnf -y install \
   ark \
   filelight \
   kde-connect
+
+############################################################
+# PRINTING
+# CUPS printing, KDE's native printer settings and
+# driverless IPP-over-USB support.
+############################################################
+
+if [[ "${INSTALL_PRINTING}" == "true" ]]; then
+  section "Printing support"
+
+  dnf -y install \
+    cups \
+    plasma-print-manager \
+    ipp-usb
+
+  systemctl enable --now cups
+
+  echo "Printing support installed."
+else
+  warn "Skipping printing because INSTALL_PRINTING=false"
+fi
+
+############################################################
+# REMOTE DESKTOP
+# Optional native KDE client and desktop-sharing server
+# for RDP/VNC access.
+############################################################
+
+if [[ "${INSTALL_REMOTE_DESKTOP}" == "true" ]]; then
+  section "KDE Remote Desktop"
+
+  dnf -y install \
+    krdc \
+    krfb
+
+  echo "KDE remote desktop tools installed."
+else
+  warn "Skipping KDE remote desktop because INSTALL_REMOTE_DESKTOP=false"
+fi
 
 ############################################################
 # PLASMA LOGIN MANAGER
@@ -324,12 +415,13 @@ dnf -y install \
   libva-utils \
   gstreamer1-plugins-base \
   gstreamer1-plugins-good \
+  gstreamer1-plugins-good-extras \
   gstreamer1-plugins-bad-free \
   gstreamer1-plugins-bad-freeworld \
-  gstreamer1-plugins-bad-free-extras \
   gstreamer1-plugin-openh264 \
   gstreamer1-plugins-ugly \
   gstreamer1-libav \
+  lame \
   openh264 \
   mozilla-openh264
 
@@ -525,47 +617,64 @@ fi
 
 ############################################################
 # FILESYSTEM CONFIGURATION
-# Labels Btrfs filesystems if present.
+# Checks and applies Btrfs labels, then refreshes udev so
+# Dolphin and other desktop tools see them immediately.
 ############################################################
 
+declare -A LABELLED_BTRFS_UUIDS=()
+
+set_btrfs_label() {
+  local mount_point="$1"
+  local desired_label="$2"
+  local filesystem_uuid
+  local current_label
+
+  if ! mountpoint -q "${mount_point}"; then
+    warn "${mount_point} is not mounted, skipping label"
+    return
+  fi
+
+  if [[ "$(findmnt -no FSTYPE "${mount_point}" 2>/dev/null)" != "btrfs" ]]; then
+    warn "${mount_point} is not Btrfs, skipping label"
+    return
+  fi
+
+  filesystem_uuid="$(findmnt -no UUID "${mount_point}" 2>/dev/null || true)"
+
+  if [[ -z "${filesystem_uuid}" ]]; then
+    warn "Could not determine the Btrfs UUID for ${mount_point}"
+    return
+  fi
+
+  if [[ -n "${LABELLED_BTRFS_UUIDS[${filesystem_uuid}]:-}" ]]; then
+    warn "${mount_point} shares a Btrfs filesystem with ${LABELLED_BTRFS_UUIDS[${filesystem_uuid}]}, skipping duplicate label"
+    return
+  fi
+
+  LABELLED_BTRFS_UUIDS["${filesystem_uuid}"]="${mount_point}"
+  current_label="$(btrfs filesystem label "${mount_point}" 2>/dev/null || true)"
+
+  if [[ "${current_label}" == "${desired_label}" ]]; then
+    echo "${mount_point} is already labelled '${desired_label}'."
+  else
+    echo "Labelling ${mount_point} as '${desired_label}'..."
+    btrfs filesystem label "${mount_point}" "${desired_label}" \
+      || warn "Could not label ${mount_point} as '${desired_label}'"
+  fi
+}
+
 if [[ "${LABEL_BTRFS}" == "true" ]]; then
-  section "Set Btrfs labels"
+  section "Check Btrfs labels"
 
-  ROOT_FSTYPE=$(findmnt -no FSTYPE / 2>/dev/null)
-  ROOT_UUID=$(findmnt -no UUID / 2>/dev/null)
+  set_btrfs_label / root
+  set_btrfs_label /home home
+  set_btrfs_label /games games
 
-  if [[ "$ROOT_FSTYPE" == "btrfs" ]]; then
-    btrfs filesystem label / fedora || true
-  else
-    warn "/ is not Btrfs, skipping / label"
-  fi
-
-  if mountpoint -q /home; then
-    HOME_FSTYPE=$(findmnt -no FSTYPE /home 2>/dev/null)
-    HOME_UUID=$(findmnt -no UUID /home 2>/dev/null)
-
-    if [[ "$HOME_FSTYPE" == "btrfs" ]]; then
-      if [[ "$HOME_UUID" != "$ROOT_UUID" ]]; then
-        btrfs filesystem label /home home || true
-      else
-        warn "/home is on the same Btrfs filesystem as /, skipping /home label"
-      fi
-    else
-      warn "/home is not Btrfs, skipping /home label"
-    fi
-  else
-    warn "/home not separately mounted, skipping /home label"
-  fi
-
-  if mountpoint -q /games; then
-    if [[ "$(findmnt -no FSTYPE /games 2>/dev/null)" == "btrfs" ]]; then
-      btrfs filesystem label /games games || true
-    else
-      warn "/games is not Btrfs, skipping /games label"
-    fi
-  else
-    warn "/games not mounted, skipping /games label"
-  fi
+  echo "Refreshing device information..."
+  udevadm trigger || warn "udevadm trigger reported an issue"
+  udevadm settle || warn "udevadm settle reported an issue"
+else
+  warn "Skipping Btrfs labels because LABEL_BTRFS=false"
 fi
 
 ############################################################
@@ -682,15 +791,13 @@ if [[ "${INSTALL_OPENRAZER}" == "true" ]]; then
     openrazer-meta \
     polychromatic
 
-  systemctl daemon-reload || true
-
   groupadd -f plugdev
-  gpasswd -a "${TARGET_USER}" plugdev
+  usermod -aG plugdev "${TARGET_USER}"
 
   sudo -u "${TARGET_USER}" systemctl --user enable openrazer-daemon.service || true
 
   echo "OpenRazer installed."
-  echo "User added to plugdev group."
+  echo "${TARGET_USER} added to the plugdev group."
   echo "Reboot or log out/in before using Polychromatic."
 else
   warn "Skipping OpenRazer because INSTALL_OPENRAZER=false"
