@@ -213,13 +213,8 @@ try_install \
   git \
   fastfetch \
   btop \
-  htop \
-  python3 \
-  python3-pip \
-  flatpak \
-  distrobox
-
-
+  flatpak
+  
 # -----------------------------
 # Native desktop applications
 # -----------------------------
@@ -272,22 +267,6 @@ fi
 
 # Ensure Discover is present even if the pattern did not include it.
 try_install discover6
-
-
-# -----------------------------
-# Graphics, Vulkan and VA-API
-# -----------------------------
-section "Graphics, Vulkan and VA-API"
-
-try_install \
-  Mesa \
-  Mesa-dri \
-  libvulkan1 \
-  vulkan-tools \
-  libva2 \
-  libva-utils \
-  Mesa-libva
-
 
 # -----------------------------
 # Gaming tools
@@ -452,7 +431,9 @@ try_install \
   virt-install \
   virt-viewer \
   ovmf \
-  swtpm
+  swtpm \
+  spice-vdagent \
+  qemu-guest-agent
 
 section "Enable libvirt"
 
@@ -465,6 +446,10 @@ usermod -aG libvirt "${TARGET_USER}" 2>/dev/null \
 usermod -aG kvm "${TARGET_USER}" 2>/dev/null \
   || warn "Could not add ${TARGET_USER} to kvm group"
 
+systemctl enable --now spice-vdagentd \
+  || warn "Could not enable spice-vdagentd"
+sudo systemctl enable --now qemu-guest-agent \
+  || warn "Could not enable qemu-guest-agent"
 
 # -----------------------------
 # Boot target
