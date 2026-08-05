@@ -480,10 +480,8 @@ dnf -y install \
 # Ensures Browsers & Apps don't have tofu symbols
 ############################################################
 
-dnf -y install \
-  'google-noto-*-fonts' \
-  'liberation-*-fonts' \
-  'dejavu-*-fonts'
+dnf -y group install fonts
+dnf -y install liberation-fonts
 
 ############################################################
 # OFFICE
