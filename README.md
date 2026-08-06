@@ -27,10 +27,10 @@ reboot
 
 
 # Recommended Fedora Everything partitioning:
+using blivet custom partition manager
 
-/boot/efi    1GB        FAT32
-/boot        2GB        ext4      boot flag
-/            100GB      Btrfs
-/home        150GB      Btrfs
-/games       remainder  Btrfs
-Unallocated  ~100GB free for distro testing
+1gb /boot/efi
+4gb /boot
+50gb btrfs partition containing btrfs subvolume labled as root and mounted at /
+50gb btrfs partition containing btrfs subvolume labled as home and mounted at /home
+45gb btrfs partition containing btrfs subvolume labled as games and mounted at /games
