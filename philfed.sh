@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# PhilFed v5.0
+# PhilFed v5.0.1
 # Fedora Everything -> Minimal Install -> TTY -> KDE Gaming Desktop
 #
 # Purpose:
@@ -17,9 +17,11 @@ set -euo pipefail
 # Run with:
 #   sudo ./philfed.sh
 
-LOGFILE="/var/log/philfed.log"
-exec > >(tee -a "$LOGFILE")
-exec 2>&1
+############################################################
+# VERSION
+############################################################
+
+PHILFED_VERSION="5.0.1"
 
 ############################################################
 # TOGGLES
@@ -29,7 +31,7 @@ INSTALL_NVIDIA=true
 INSTALL_VIRT=true
 INSTALL_MAXWELL_FIX=true
 INSTALL_OPENRAZER=true
-INSTALL_COOLERCONTROL=true
+INSTALL_COOLERCONTROL=false
 INSTALL_PROTONVPN=true
 INSTALL_PRINTING=true
 INSTALL_REMOTE_DESKTOP=false
@@ -37,18 +39,7 @@ FIX_GAMES_PERMISSIONS=true
 LABEL_BTRFS=true
 
 ############################################################
-# COLOURS AND HELPERS
-############################################################
-
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RESET='\033[0m'
-
-section() { echo -e "\n${GREEN}==> $1${RESET}"; }
-warn() { echo -e "${YELLOW}Warning:${RESET} $1"; }
-
-############################################################
-# SAFETY CHECKS
+# INITIAL SAFETY CHECKS
 ############################################################
 
 # This script must be launched from a normal user account through sudo.
@@ -87,9 +78,77 @@ fi
 
 FEDORA_VERSION="$(rpm -E '%fedora')"
 
+############################################################
+# LOGGING
+############################################################
+
+LOG_DIRECTORY="${TARGET_HOME}/Desktop"
+LOG_TIMESTAMP="$(date '+%Y-%m-%d_%H-%M-%S')"
+LOGFILE="${LOG_DIRECTORY}/philfed-${PHILFED_VERSION}-${LOG_TIMESTAMP}.log"
+
+mkdir -p "${LOG_DIRECTORY}"
+chown "${TARGET_USER}:${TARGET_USER}" "${LOG_DIRECTORY}"
+chmod 755 "${LOG_DIRECTORY}"
+
+touch "${LOGFILE}"
+chown "${TARGET_USER}:${TARGET_USER}" "${LOGFILE}"
+chmod 644 "${LOGFILE}"
+
+exec > >(tee -a "${LOGFILE}")
+exec 2>&1
+
+############################################################
+# COLOURS AND HELPERS
+############################################################
+
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+RESET='\033[0m'
+
+declare -a COMPLETED_SECTIONS=()
+declare -a WARNINGS=()
+declare -a NOTES=()
+declare -a SKIPPED_SECTIONS=()
+
+section() {
+  echo -e "\n${GREEN}==> $1${RESET}"
+}
+
+complete_section() {
+  COMPLETED_SECTIONS+=("$1")
+}
+
+warn() {
+  local message="$1"
+
+  echo -e "${YELLOW}Warning:${RESET} ${message}"
+  WARNINGS+=("${message}")
+}
+
+note() {
+  local message="$1"
+
+  echo -e "${BLUE}Note:${RESET} ${message}"
+  NOTES+=("${message}")
+}
+
+skip_section() {
+  local message="$1"
+
+  echo "Skipped: ${message}"
+  SKIPPED_SECTIONS+=("${message}")
+}
+
+############################################################
+# ENVIRONMENT
+############################################################
+
 section "Environment"
+echo "PhilFed Version: ${PHILFED_VERSION}"
 echo "Fedora Version: ${FEDORA_VERSION}"
 echo "Target User: ${TARGET_USER}"
+echo "Installation Log: ${LOGFILE}"
 echo "Install NVIDIA: ${INSTALL_NVIDIA}"
 echo "Install Virt: ${INSTALL_VIRT}"
 echo "Install Maxwell Fix: ${INSTALL_MAXWELL_FIX}"
@@ -102,18 +161,22 @@ echo "Fix /games permissions: ${FIX_GAMES_PERMISSIONS}"
 echo "Label Btrfs filesystems: ${LABEL_BTRFS}"
 
 ############################################################
-# DNF 5 local settings
-# Allows more package max_parallel_downloads
-# fastestmirror looks for nearby/low-latency mirrors
+# DNF 5 LOCAL SETTINGS
+# Allows up to 10 package downloads in parallel.
+# Fedora's normal mirror selection is retained.
 ############################################################
+
+section "Configure DNF"
 
 mkdir -p /etc/dnf/libdnf5.conf.d
 
 tee /etc/dnf/libdnf5.conf.d/80-local.conf >/dev/null <<'EOF'
 [main]
 max_parallel_downloads=10
-fastestmirror=True
+fastestmirror=False
 EOF
+
+complete_section "Configure DNF"
 
 ############################################################
 # BASE SYSTEM
@@ -130,6 +193,8 @@ dnf -y install \
   nano \
   vim
 
+complete_section "Base update and core tools"
+
 ############################################################
 # RPM FUSION
 # Enables non-free/free repositories for NVIDIA, Steam, codecs, etc.
@@ -142,6 +207,8 @@ dnf -y install \
 
 dnf -y upgrade --refresh
 
+complete_section "Enable RPM Fusion"
+
 ############################################################
 # CISCO OPENH264
 # Enables Fedora's Cisco OpenH264 repository.
@@ -149,6 +216,7 @@ dnf -y upgrade --refresh
 
 section "Enable Cisco OpenH264"
 dnf config-manager setopt fedora-cisco-openh264.enabled=1 || true
+complete_section "Enable Cisco OpenH264"
 
 ############################################################
 # KDE CORE
@@ -165,6 +233,8 @@ dnf -y install \
   plasma-discover-flatpak \
   plasma-nm \
   plasma-pa
+
+complete_section "KDE Core"
 
 ############################################################
 # KDE INTEGRATION AND POLISH
@@ -194,6 +264,8 @@ dnf -y install \
   xorg-x11-server-Xwayland \
   wl-clipboard
 
+complete_section "KDE Integration and polish"
+
 ############################################################
 # DOLPHIN INTEGRATION
 # Additional protocols, admin access, plugins and
@@ -206,6 +278,8 @@ dnf -y install \
   kio-extras \
   kio-admin \
   kdenetwork-filesharing
+
+complete_section "Dolphin integration"
 
 ############################################################
 # KDE APPLICATIONS
@@ -229,6 +303,8 @@ dnf -y install \
   filelight \
   kde-connect
 
+complete_section "KDE Applications"
+
 ############################################################
 # PRINTING
 # CUPS printing, KDE's native printer settings and
@@ -246,8 +322,9 @@ if [[ "${INSTALL_PRINTING}" == "true" ]]; then
   systemctl enable --now cups
 
   echo "Printing support installed."
+  complete_section "Printing support"
 else
-  warn "Skipping printing because INSTALL_PRINTING=false"
+  skip_section "Printing support"
 fi
 
 ############################################################
@@ -257,15 +334,18 @@ fi
 ############################################################
 
 if [[ "${INSTALL_REMOTE_DESKTOP}" == "true" ]]; then
-  section "KDE Remote Desktop"
+  section "KDE remote desktop"
 
-  dnf -y install \
+  if dnf -y install \
     krdc \
-    krfb
-
-  echo "KDE remote desktop tools installed."
+    krfb; then
+    echo "KDE remote desktop tools installed."
+    complete_section "KDE remote desktop"
+  else
+    warn "KDE remote desktop tools could not be installed. Continuing without them."
+  fi
 else
-  warn "Skipping KDE remote desktop because INSTALL_REMOTE_DESKTOP=false"
+  skip_section "KDE remote desktop"
 fi
 
 ############################################################
@@ -278,6 +358,8 @@ systemctl disable sddm gdm lightdm 2>/dev/null || true
 systemctl enable --force plasmalogin.service
 systemctl set-default graphical.target
 
+complete_section "Enable Plasma Login Manager"
+
 ############################################################
 # AUDIO STACK
 # PipeWire, PulseAudio compatibility, WirePlumber and ALSA tools.
@@ -289,6 +371,8 @@ dnf -y install \
   pipewire-pulseaudio \
   wireplumber \
   alsa-utils
+
+complete_section "Audio stack"
 
 ############################################################
 # NETWORKING AND BLUETOOTH
@@ -307,6 +391,8 @@ dnf -y install \
 systemctl enable NetworkManager
 systemctl enable bluetooth
 
+complete_section "Networking and Bluetooth"
+
 ############################################################
 # FIRMWARE
 # General firmware plus Intel WiFi firmware.
@@ -318,6 +404,8 @@ dnf -y install \
   iwlwifi-dvm-firmware \
   iwlwifi-mvm-firmware \
   iwlwifi-mld-firmware
+
+complete_section "Firmware"
 
 ############################################################
 # WEB AND INTERNET
@@ -332,38 +420,68 @@ dnf -y install \
   qbittorrent \
   keepassxc
 
+complete_section "Web and internet"
+
 ############################################################
 # BRAVE ORIGIN
 # Optional stripped-down Brave browser from Brave's RPM repo.
+# Repository setup and package installation are non-fatal.
 ############################################################
 
 section "Brave Origin"
 
-dnf -y install dnf-plugins-core
+BRAVE_REPO_READY=false
 
-if [[ ! -f /etc/yum.repos.d/brave-browser.repo ]]; then
-  dnf -y config-manager addrepo \
-    --from-repofile=https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
-else
+if [[ -f /etc/yum.repos.d/brave-browser.repo ]]; then
   echo "Brave repository already configured."
+  BRAVE_REPO_READY=true
+elif dnf -y config-manager addrepo \
+  --from-repofile=https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo; then
+  echo "Brave repository configured."
+  BRAVE_REPO_READY=true
+else
+  warn "Brave repository could not be configured. Skipping Brave Origin."
 fi
 
-dnf -y install brave-origin
+if [[ "${BRAVE_REPO_READY}" == "true" ]]; then
+  if dnf -y install brave-origin; then
+    complete_section "Brave Origin"
+  else
+    warn "Brave Origin installation failed. Continuing without it."
+  fi
+fi
 
 ############################################################
-# Waterfox Browser
+# WATERFOX
 # Firefox-based browser via Fedora COPR.
-# Less aggressive than LibreWolf, allows DRM content on win
+# Less aggressive than LibreWolf and supports DRM content.
+# Repository setup and package installation are non-fatal.
 ############################################################
 
-dnf -y copr enable deltacopy/waterfox || warn "Waterfox COPR could not be enabled or is already configured."
-dnf -y install waterfox
+section "Waterfox"
+
+WATERFOX_REPO_READY=false
+
+if dnf -y copr enable deltacopy/waterfox; then
+  echo "Waterfox COPR enabled."
+  WATERFOX_REPO_READY=true
+else
+  warn "Waterfox COPR could not be enabled. Skipping Waterfox."
+fi
+
+if [[ "${WATERFOX_REPO_READY}" == "true" ]]; then
+  if dnf -y install waterfox; then
+    complete_section "Waterfox"
+  else
+    warn "Waterfox installation failed. Continuing without it."
+  fi
+fi
 
 ############################################################
 # PROTON VPN
 # Official Proton VPN Linux GUI via Proton's Fedora repo.
-# Treated as non-critical so a Proton packaging/service issue
-# does not abort the rest of the Fedora bootstrap.
+# Treated as non-critical so a Proton packaging or service
+# issue does not abort the rest of the Fedora bootstrap.
 ############################################################
 
 if [[ "${INSTALL_PROTONVPN}" == "true" ]]; then
@@ -382,33 +500,38 @@ if [[ "${INSTALL_PROTONVPN}" == "true" ]]; then
   else
     dnf -y check-update --refresh || true
 
-    if ! dnf -y install proton-vpn-gnome-desktop; then
-      warn "Proton VPN package installation reported an error."
-
-      if rpm -q proton-vpn-gnome-desktop proton-vpn-daemon &>/dev/null; then
-        warn "Proton VPN packages are installed despite the reported error. Continuing."
-      else
-        warn "Proton VPN installation did not complete. Continuing without Proton VPN."
-      fi
-    else
+    if dnf -y install proton-vpn-gnome-desktop; then
       echo "Proton VPN installed."
+      complete_section "Proton VPN"
+
+    elif rpm -q proton-vpn-gnome-desktop proton-vpn-daemon &>/dev/null; then
+      echo "Proton VPN packages are installed despite the reported installation error."
+      complete_section "Proton VPN"
+
+      note "Proton VPN reported a service setup error during installation. This may relate to split tunnelling, which is unavailable on the free Proton VPN plan. Check that the main VPN application works after rebooting."
+
+    else
+      warn "Proton VPN installation did not complete. Continuing without Proton VPN."
     fi
   fi
 
   rm -f "${PROTONVPN_TMP}"
 else
-  warn "Skipping Proton VPN because INSTALL_PROTONVPN=false"
+  skip_section "Proton VPN"
 fi
 
 ############################################################
 # MULTIMEDIA CODECS
-# Replaces Fedora ffmpeg-free with RPM Fusion ffmpeg,
-# then installs common codec support.
+# Installs Fedora and RPM Fusion multimedia framework support,
+# replaces ffmpeg-free with RPM Fusion ffmpeg, then installs
+# the explicit codec packages PhilFed expects.
 ############################################################
 
 section "Multimedia and codecs"
-dnf -y swap ffmpeg-free ffmpeg --allowerasing || true
-dnf -y group upgrade multimedia --setopt="install_weak_deps=False" --exclude=PackageKit-gstreamer-plugin || true
+
+dnf -y group install multimedia
+dnf -y swap ffmpeg-free ffmpeg --allowerasing
+
 dnf -y install \
   ffmpeg-libs \
   libva \
@@ -425,6 +548,8 @@ dnf -y install \
   openh264 \
   mozilla-openh264
 
+complete_section "Multimedia and codecs"
+
 ############################################################
 # MEDIA PLAYBACK
 # VLC and extra VLC plugin support.
@@ -435,6 +560,8 @@ dnf -y install \
   vlc \
   vlc-plugins-base \
   vlc-plugins-freeworld
+
+complete_section "Media playback"
 
 ############################################################
 # GAMING PLATFORM
@@ -447,6 +574,8 @@ dnf -y install \
   lutris \
   protontricks \
   winetricks
+
+complete_section "Gaming platform"
 
 ############################################################
 # GAMING PERFORMANCE AND GRAPHICS
@@ -464,6 +593,8 @@ dnf -y install \
   vulkan-loader \
   kernel-modules-extra
 
+complete_section "Gaming performance and graphics"
+
 ############################################################
 # CONTENT CREATION
 # Recording, streaming and video editing.
@@ -475,13 +606,21 @@ dnf -y install \
   kdenlive \
   pinta
 
+complete_section "Content creation"
+
 ############################################################
-# FULL FONT INSTALL PACKAGE
-# Ensures Browsers & Apps don't have tofu symbols
+# FONTS
+# Installs Fedora's standard font group and Liberation fonts.
+# This matches a full Fedora KDE installation more closely
+# without installing every available Noto or legacy font.
 ############################################################
+
+section "Fonts"
 
 dnf -y group install fonts
 dnf -y install liberation-fonts
+
+complete_section "Fonts"
 
 ############################################################
 # OFFICE
@@ -495,6 +634,8 @@ dnf -y install \
   libreoffice-langpack-en \
   hunspell-en \
   autocorr-en
+
+complete_section "Office"
 
 ############################################################
 # SYSTEM UTILITIES
@@ -515,6 +656,8 @@ dnf -y install \
   p7zip-plugins \
   unrar
 
+complete_section "System utilities"
+
 ############################################################
 # FLATPAK AND FLATHUB
 # Enables Flatpak support and the Flathub remote.
@@ -523,6 +666,7 @@ dnf -y install \
 section "Flatpak and Flathub"
 dnf -y install flatpak
 flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo || true
+complete_section "Flatpak and Flathub"
 
 ############################################################
 # FLATPAK APPS
@@ -537,6 +681,7 @@ flatpak install -y flathub com.github.tchx84.Flatseal || warn "Flatseal Flatpak 
 flatpak install -y flathub com.heroicgameslauncher.hgl || warn "Heroic Flatpak failed"
 flatpak install -y flathub io.github.vikdevelop.SaveDesktop || warn "SaveDesktop Flatpak failed"
 flatpak install -y flathub org.freefilesync.FreeFileSync || warn "FreeFileSync Flatpak failed"
+complete_section "Flatpak apps"
 
 ############################################################
 # LOCALSEND FIREWALL
@@ -545,9 +690,26 @@ flatpak install -y flathub org.freefilesync.FreeFileSync || warn "FreeFileSync F
 
 section "LocalSend firewall"
 
-firewall-cmd --add-port=53317/tcp --permanent || warn "Failed to open LocalSend TCP port"
-firewall-cmd --add-port=53317/udp --permanent || warn "Failed to open LocalSend UDP port"
-firewall-cmd --reload || warn "Failed to reload firewall"
+LOCALSEND_FIREWALL_READY=true
+
+if ! firewall-cmd --add-port=53317/tcp --permanent; then
+  warn "Failed to open LocalSend TCP port"
+  LOCALSEND_FIREWALL_READY=false
+fi
+
+if ! firewall-cmd --add-port=53317/udp --permanent; then
+  warn "Failed to open LocalSend UDP port"
+  LOCALSEND_FIREWALL_READY=false
+fi
+
+if ! firewall-cmd --reload; then
+  warn "Failed to reload firewall"
+  LOCALSEND_FIREWALL_READY=false
+fi
+
+if [[ "${LOCALSEND_FIREWALL_READY}" == "true" ]]; then
+  complete_section "LocalSend firewall"
+fi
 
 ############################################################
 # KDE CONNECT FIREWALL
@@ -557,13 +719,23 @@ firewall-cmd --reload || warn "Failed to reload firewall"
 
 section "KDE Connect firewall"
 
-firewall-cmd --permanent \
-  --zone=public \
-  --add-service=kdeconnect \
-  || warn "Failed to enable KDE Connect firewall service"
+KDECONNECT_FIREWALL_READY=true
 
-firewall-cmd --reload \
-  || warn "Failed to reload firewall"
+if ! firewall-cmd --permanent \
+  --zone=public \
+  --add-service=kdeconnect; then
+  warn "Failed to enable KDE Connect firewall service"
+  KDECONNECT_FIREWALL_READY=false
+fi
+
+if ! firewall-cmd --reload; then
+  warn "Failed to reload firewall"
+  KDECONNECT_FIREWALL_READY=false
+fi
+
+if [[ "${KDECONNECT_FIREWALL_READY}" == "true" ]]; then
+  complete_section "KDE Connect firewall"
+fi
 
 ############################################################
 # USER SHELL
@@ -573,27 +745,37 @@ firewall-cmd --reload \
 
 section "Set Fish as shell for ${TARGET_USER}"
 
+FISH_READY=true
+
 if [[ -x /usr/bin/fish ]]; then
-  chsh -s /usr/bin/fish "${TARGET_USER}" \
-    || warn "Could not set Fish shell for ${TARGET_USER}"
+  if ! chsh -s /usr/bin/fish "${TARGET_USER}"; then
+    warn "Could not set Fish shell for ${TARGET_USER}"
+    FISH_READY=false
+  fi
 
   section "Configure Fish aliases"
 
-  sudo -u "${TARGET_USER}" fish -c "
-    alias --save dnfi='sudo dnf install'
-    alias --save dnfr='sudo dnf remove'
-    alias --save dnfs='dnf search'
-    alias --save dnfu='sudo dnf upgrade --refresh'
-    alias --save dnfc='sudo dnf clean all'
-    alias --save dnfl='dnf list --installed'
-    alias --save dnfq='dnf info'
+  if [[ "${FISH_READY}" == "true" ]]; then
+    if sudo -u "${TARGET_USER}" fish -c "
+      alias --save dnfi='sudo dnf install'
+      alias --save dnfr='sudo dnf remove'
+      alias --save dnfs='dnf search'
+      alias --save dnfu='sudo dnf upgrade --refresh'
+      alias --save dnfc='sudo dnf clean all'
+      alias --save dnfl='dnf list --installed'
+      alias --save dnfq='dnf info'
 
-    alias --save fp='flatpak'
-    alias --save fpi='flatpak install'
-    alias --save fpr='flatpak uninstall'
-    alias --save fps='flatpak search'
-    alias --save fpu='flatpak update'
-  " || warn "Could not configure Fish aliases for ${TARGET_USER}"
+      alias --save fp='flatpak'
+      alias --save fpi='flatpak install'
+      alias --save fpr='flatpak uninstall'
+      alias --save fps='flatpak search'
+      alias --save fpu='flatpak update'
+    "; then
+      complete_section "Fish shell and aliases"
+    else
+      warn "Could not configure Fish aliases for ${TARGET_USER}"
+    fi
+  fi
 else
   warn "Fish is not installed. Skipping shell configuration."
 fi
@@ -608,6 +790,7 @@ if [[ "${FIX_GAMES_PERMISSIONS}" == "true" ]]; then
     section "Configure /games"
     chown "${TARGET_USER}:${TARGET_USER}" /games
     chmod 755 /games
+    complete_section "Configure /games"
   else
     warn "/games not mounted, skipping permissions fix"
   fi
@@ -671,8 +854,9 @@ if [[ "${LABEL_BTRFS}" == "true" ]]; then
   echo "Refreshing device information..."
   udevadm trigger || warn "udevadm trigger reported an issue"
   udevadm settle || warn "udevadm settle reported an issue"
+  complete_section "Check Btrfs labels"
 else
-  warn "Skipping Btrfs labels because LABEL_BTRFS=false"
+  skip_section "Check Btrfs labels"
 fi
 
 ############################################################
@@ -685,7 +869,7 @@ fi
 if [[ "${INSTALL_VIRT}" == "true" ]]; then
   section "Virtualisation stack"
 
-  dnf -y install \
+  if dnf -y install \
     virt-manager \
     libvirt \
     libvirt-daemon-config-network \
@@ -694,18 +878,39 @@ if [[ "${INSTALL_VIRT}" == "true" ]]; then
     virt-install \
     virt-viewer \
     edk2-ovmf \
-    swtpm || true
+    swtpm; then
 
-  systemctl enable --now libvirtd || true
-  usermod -aG libvirt "${TARGET_USER}" || true
+    VIRTUALISATION_READY=true
+  else
+    VIRTUALISATION_READY=false
+    warn "Virtualisation packages could not be installed completely. Continuing without a confirmed virtualisation stack."
+  fi
+
+  if [[ "${VIRTUALISATION_READY}" == "true" ]]; then
+    if systemctl enable --now libvirtd; then
+      echo "libvirtd enabled and started."
+    else
+      warn "Virtualisation packages installed, but libvirtd could not be enabled."
+      VIRTUALISATION_READY=false
+    fi
+  fi
+
+  if [[ "${VIRTUALISATION_READY}" == "true" ]]; then
+    if usermod -aG libvirt "${TARGET_USER}"; then
+      echo "${TARGET_USER} added to the libvirt group."
+      complete_section "Virtualisation stack"
+    else
+      warn "Virtualisation packages installed, but ${TARGET_USER} could not be added to the libvirt group."
+    fi
+  fi
 else
-  warn "Skipping virtualisation because INSTALL_VIRT=false"
+  skip_section "Virtualisation stack"
 fi
 
 ############################################################
 # VM GUEST DETECTION
 # Installs spice-vdagent only if this install is itself
-# running as a VM guest (bare metal desktop/laptop skips this).
+# running as a VM guest.
 ############################################################
 
 section "VM guest detection"
@@ -714,13 +919,18 @@ VIRT_TYPE="$(systemd-detect-virt || true)"
 
 if [[ "${VIRT_TYPE}" != "none" ]]; then
   echo "Detected VM guest environment: ${VIRT_TYPE}"
-  section "Installing SPICE guest agent"
 
-  dnf -y install spice-vdagent
-
-  systemctl enable --now spice-vdagentd.service || warn "Could not enable spice-vdagentd.service"
+  if dnf -y install spice-vdagent; then
+    if systemctl enable --now spice-vdagentd.service; then
+      complete_section "SPICE guest agent"
+    else
+      warn "SPICE guest agent installed, but its service could not be enabled."
+    fi
+  else
+    warn "SPICE guest agent could not be installed."
+  fi
 else
-  echo "Bare metal install detected. Skipping spice-vdagent."
+  note "Bare-metal installation detected. SPICE guest agent was not required."
 fi
 
 ############################################################
@@ -765,66 +975,117 @@ EOF
     systemctl enable maxwell-reset.service
 
     echo "Audeze Maxwell reset service installed and enabled."
+    complete_section "Audeze Maxwell USB dongle reset fix"
   else
     warn "usbreset not found even after installing usbutils. Skipping Maxwell reset service."
   fi
 else
-  warn "Skipping Audeze Maxwell fix because INSTALL_MAXWELL_FIX=false"
+  skip_section "Audeze Maxwell USB dongle reset fix"
 fi
 
 ############################################################
-# HARDWARE SUPPORT
-# Openrazer.
+# HARDWARE SUPPORT — RAZER PERIPHERALS
+# OpenRazer and Polychromatic.
+# Repository setup and package installation are non-fatal.
+# The user service may not be accessible from the TTY installer,
+# so its enablement result is reported without treating it as
+# an installation failure.
 ############################################################
 
 if [[ "${INSTALL_OPENRAZER}" == "true" ]]; then
   section "OpenRazer and Polychromatic"
 
-  dnf -y install kernel-devel
+  OPENRAZER_READY=false
 
-  dnf config-manager addrepo \
-    --from-repofile=https://openrazer.github.io/hardware:razer.repo || true
+  if ! dnf -y install kernel-devel; then
+    warn "Kernel development packages could not be installed. Skipping OpenRazer."
 
-  dnf -y install \
+  elif ! dnf -y config-manager addrepo \
+    --from-repofile=https://openrazer.github.io/hardware:razer.repo; then
+    warn "OpenRazer repository could not be configured. Skipping OpenRazer."
+
+  elif ! dnf -y install \
     openrazer-meta \
-    polychromatic
+    polychromatic; then
+    warn "OpenRazer or Polychromatic could not be installed. Continuing without confirmed Razer support."
 
-  groupadd -f plugdev
-  usermod -aG plugdev "${TARGET_USER}"
+  else
+    OPENRAZER_READY=true
+  fi
 
-  sudo -u "${TARGET_USER}" systemctl --user enable openrazer-daemon.service || true
+  if [[ "${OPENRAZER_READY}" == "true" ]]; then
+    if groupadd -f plugdev; then
+      echo "plugdev group is available."
+    else
+      warn "OpenRazer installed, but the plugdev group could not be created."
+      OPENRAZER_READY=false
+    fi
+  fi
 
-  echo "OpenRazer installed."
-  echo "${TARGET_USER} added to the plugdev group."
-  echo "Reboot or log out/in before using Polychromatic."
+  if [[ "${OPENRAZER_READY}" == "true" ]]; then
+    if usermod -aG plugdev "${TARGET_USER}"; then
+      echo "${TARGET_USER} added to the plugdev group."
+    else
+      warn "OpenRazer installed, but ${TARGET_USER} could not be added to the plugdev group."
+      OPENRAZER_READY=false
+    fi
+  fi
+
+  if [[ "${OPENRAZER_READY}" == "true" ]]; then
+    if sudo -u "${TARGET_USER}" \
+      systemctl --user enable openrazer-daemon.service; then
+      echo "OpenRazer user service enabled."
+    else
+      note "OpenRazer could not enable its user service from the TTY installer. This has not prevented OpenRazer from working on previous PhilFed installations. Check Polychromatic after logging into Plasma."
+    fi
+
+    echo "OpenRazer and Polychromatic installed."
+    echo "Reboot or log out and back in before using Polychromatic."
+
+    complete_section "OpenRazer and Polychromatic"
+  fi
 else
-  warn "Skipping OpenRazer because INSTALL_OPENRAZER=false"
+  skip_section "OpenRazer and Polychromatic"
 fi
 
 ############################################################
-# HARDWARE SUPPORT
-# CoolerControl -
-# Fan, pump and cooling device monitoring/control.
+# HARDWARE SUPPORT — COOLERCONTROL
+# Fan, pump and cooling-device monitoring and control.
+# Disabled by default while ASUS ROG Strix sensor support and
+# required BIOS settings are still being investigated.
+# Repository setup, package installation and daemon enablement
+# are all non-fatal.
 ############################################################
 
 if [[ "${INSTALL_COOLERCONTROL}" == "true" ]]; then
   section "CoolerControl"
 
-  # DNF5 COPR support
-  dnf -y install 'dnf5-command(copr)'
+  COOLERCONTROL_READY=false
 
-  # CoolerControl COPR repository
-  dnf -y copr enable codifryed/CoolerControl
+  if ! dnf -y install 'dnf5-command(copr)'; then
+    warn "DNF COPR support could not be installed. Skipping CoolerControl."
 
-  # CoolerControl application and daemon
-  dnf -y install coolercontrol
+  elif ! dnf -y copr enable codifryed/CoolerControl; then
+    warn "CoolerControl COPR could not be enabled. Skipping CoolerControl."
 
-  # Start now and automatically on boot
-  systemctl enable --now coolercontrold
+  elif ! dnf -y install coolercontrol; then
+    warn "CoolerControl could not be installed. Continuing without it."
 
-  echo "CoolerControl installed and daemon enabled."
+  elif ! systemctl enable --now coolercontrold; then
+    warn "CoolerControl installed, but its daemon could not be enabled."
+
+  else
+    COOLERCONTROL_READY=true
+  fi
+
+  if [[ "${COOLERCONTROL_READY}" == "true" ]]; then
+    echo "CoolerControl installed and daemon enabled."
+    complete_section "CoolerControl"
+
+    note "Some ASUS ROG Strix motherboards may require additional sensor-driver support and BIOS configuration for all readings and controls to work."
+  fi
 else
-  warn "Skipping CoolerControl because INSTALL_COOLERCONTROL=false"
+  skip_section "CoolerControl"
 fi
 
 ############################################################
@@ -836,84 +1097,230 @@ fi
 if [[ "${INSTALL_NVIDIA}" == "true" ]]; then
   section "NVIDIA drivers"
 
+  NVIDIA_READY=true
+
   if command -v mokutil &>/dev/null && mokutil --sb-state 2>/dev/null | grep -qi "enabled"; then
     warn "Secure Boot is enabled. NVIDIA may not load unless akmods signing/MOK enrolment is configured."
   fi
 
-  dnf -y install akmod-nvidia xorg-x11-drv-nvidia-cuda
+  if ! dnf -y install akmod-nvidia xorg-x11-drv-nvidia-cuda; then
+    warn "NVIDIA driver packages could not be installed. Continuing so the final summary and log remain available."
+    NVIDIA_READY=false
+  fi
 
-  section "Force NVIDIA akmod build"
-  akmods --force || warn "akmods build reported an issue"
+  if [[ "${NVIDIA_READY}" == "true" ]]; then
+    section "Force NVIDIA akmod build"
 
-  section "Waiting for NVIDIA module"
-  for i in {1..30}; do
-    if modinfo nvidia &>/dev/null; then
-      echo "NVIDIA module is available."
-      break
+    if ! akmods --force; then
+      warn "NVIDIA akmod build reported an issue."
+      NVIDIA_READY=false
     fi
+  fi
 
-    echo "Waiting for NVIDIA module build... ${i}/30"
-    sleep 10
-  done
+  if [[ "${NVIDIA_READY}" == "true" ]]; then
+    section "Waiting for NVIDIA module"
 
-  dracut --force || warn "dracut reported an issue"
+    NVIDIA_MODULE_READY=false
 
-  section "Checking NVIDIA module"
-  modinfo -F version nvidia || warn "NVIDIA module still not ready. Wait a few minutes before rebooting."
+    for i in {1..30}; do
+      if modinfo nvidia &>/dev/null; then
+        echo "NVIDIA module is available."
+        NVIDIA_MODULE_READY=true
+        break
+      fi
+
+      echo "Waiting for NVIDIA module build... ${i}/30"
+      sleep 10
+    done
+
+    if [[ "${NVIDIA_MODULE_READY}" != "true" ]]; then
+      warn "NVIDIA module did not become available during the waiting period."
+      NVIDIA_READY=false
+    fi
+  fi
+
+  if [[ "${NVIDIA_READY}" == "true" ]]; then
+    if ! dracut --force; then
+      warn "dracut reported an issue while preparing the NVIDIA driver."
+      NVIDIA_READY=false
+    fi
+  fi
+
+  if [[ "${NVIDIA_READY}" == "true" ]]; then
+    section "Checking NVIDIA module"
+
+    if modinfo -F version nvidia; then
+      complete_section "NVIDIA drivers"
+    else
+      warn "NVIDIA module still not ready. Wait a few minutes before rebooting."
+    fi
+  fi
 else
-  warn "Skipping NVIDIA because INSTALL_NVIDIA=false"
+  skip_section "NVIDIA drivers"
 fi
 
 ############################################################
-# BOOT TWEAKS & CLEANUP
+# BOOT TWEAKS AND CLEANUP
+# Updates Flatpak runtimes, disables unnecessary boot waiting,
+# previews packages DNF considers removable without removing
+# them, then clears cached DNF data.
 ############################################################
 
-section "Boot tweaks and Cleanup"
-flatpak update -y || warn "Flatpak runtime update failed"
-systemctl disable NetworkManager-wait-online.service || true
-dnf -y autoremove || true
-dnf -y clean all || true
+section "Boot tweaks and cleanup"
+
+if flatpak update -y; then
+  echo "Flatpak applications and runtimes updated."
+else
+  warn "Flatpak application or runtime update failed."
+fi
+
+if systemctl disable NetworkManager-wait-online.service; then
+  echo "NetworkManager wait-online service disabled."
+else
+  note "NetworkManager wait-online service was already disabled or could not be changed."
+fi
+
+complete_section "Boot tweaks and cleanup"
+
+############################################################
+# AUTOREMOVE PREVIEW
+# Shows packages DNF considers removable.
+# No packages are automatically removed by PhilFed.
+############################################################
+
+section "Autoremove preview"
+
+echo "Checking for packages DNF considers removable."
+echo "Nothing will be removed automatically."
+echo
+
+dnf autoremove --assumeno || true
+
+echo
+echo "Autoremove preview complete."
+echo "No packages were automatically removed."
+
+complete_section "Autoremove preview"
+
+############################################################
+# DNF CACHE CLEANUP
+############################################################
+
+section "DNF cache cleanup"
+
+if dnf -y clean all; then
+  echo "DNF cache cleared."
+  complete_section "DNF cache cleanup"
+else
+  warn "DNF cache cleanup failed."
+fi
 
 ############################################################
 # HOSTNAME
-# Optionally set a custom hostname.
+# Optionally sets a custom hostname.
 ############################################################
 
 section "Hostname"
 
-CURRENT_HOSTNAME=$(hostname)
+CURRENT_HOSTNAME="$(hostname)"
+FINAL_HOSTNAME="${CURRENT_HOSTNAME}"
+HOSTNAME_READY=true
 
 echo
-echo "Current name of this computer: $CURRENT_HOSTNAME"
+echo "Current name of this computer: ${CURRENT_HOSTNAME}"
 echo
 echo "Please choose a name for your computer and press Enter."
-echo "Or just press Enter to keep '$CURRENT_HOSTNAME'."
+echo "Or just press Enter to keep '${CURRENT_HOSTNAME}'."
 echo
 echo "Names may contain letters, numbers and hyphens (-)."
 echo "Spaces are not allowed."
 echo
 
 while true; do
-    read -rp "Computer name: " HOSTNAME
+  read -rp "Computer name: " NEW_HOSTNAME
 
-    # Blank input keeps current hostname
-    [[ -z "$HOSTNAME" ]] && break
+  if [[ -z "${NEW_HOSTNAME}" ]]; then
+    echo "Computer name left unchanged: ${CURRENT_HOSTNAME}"
+    break
+  fi
 
-    if [[ "$HOSTNAME" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$ ]]; then
-        hostnamectl set-hostname "$HOSTNAME" || warn "Failed to set hostname"
-        echo "Computer name set to: $HOSTNAME"
-        break
+  if [[ "${NEW_HOSTNAME}" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$ ]]; then
+    if hostnamectl set-hostname "${NEW_HOSTNAME}"; then
+      FINAL_HOSTNAME="${NEW_HOSTNAME}"
+      echo "Computer name set to: ${NEW_HOSTNAME}"
     else
-        warn "Invalid hostname. Use only letters, numbers, hyphens and no spaces."
-        echo "Please try again."
+      warn "Failed to set the computer name. Keeping '${CURRENT_HOSTNAME}'."
+      HOSTNAME_READY=false
     fi
+
+    break
+  else
+    echo -e "${YELLOW}Invalid hostname:${RESET} Use only letters, numbers, hyphens and no spaces."
+    echo "Please try again."
+  fi
 done
 
+if [[ "${HOSTNAME_READY}" == "true" ]]; then
+  complete_section "Hostname"
+fi
+
 ############################################################
-# COMPLETE
+# INSTALLATION SUMMARY
+# Printed to the TTY and written to the end of the Desktop log.
 ############################################################
 
-section "Complete"
-echo "Bootstrap finished."
-echo "Reboot with:"
-echo "sudo reboot"
+section "Installation summary"
+
+echo
+echo "============================================================"
+echo
+echo "PhilFed ${PHILFED_VERSION} installation complete."
+echo
+echo "Computer name:"
+echo "  ${FINAL_HOSTNAME}"
+echo
+echo "Installed:"
+
+if (( ${#COMPLETED_SECTIONS[@]} == 0 )); then
+  echo "  None recorded."
+else
+  for completed_section in "${COMPLETED_SECTIONS[@]}"; do
+    echo "  ✓ ${completed_section}"
+  done
+fi
+
+echo
+echo "Warnings:"
+
+if (( ${#WARNINGS[@]} == 0 )); then
+  echo "  None"
+else
+  for warning_message in "${WARNINGS[@]}"; do
+    echo "  • ${warning_message}"
+  done
+fi
+
+echo
+echo "Notes:"
+
+if (( ${#NOTES[@]} == 0 )); then
+  echo "  None"
+else
+  for note_message in "${NOTES[@]}"; do
+    echo "  • ${note_message}"
+  done
+fi
+
+echo
+echo "Installation log:"
+echo "  ${LOGFILE}"
+echo
+echo "Reboot when ready:"
+echo
+echo "    sudo reboot"
+echo
+echo "------------------------------------------------------------"
+echo
+echo "No penguins were harmed during this installation."
+echo
+echo "============================================================"
