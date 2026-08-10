@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# PhilFed v6.0.0
+# PhilFed v0.6.0
 # Fedora Everything -> Minimal Install -> TTY -> KDE Desktop
 
 ############################################################
 # VERSION
 ############################################################
 
-PHILFED_VERSION="6.0.0"
+PHILFED_VERSION="0.6.0"
 
 ############################################################
 # TOGGLES
