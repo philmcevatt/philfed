@@ -4,11 +4,11 @@ set -euo pipefail
 # philfed.sh
 #
 # Purpose:
-# To go from Fedora Everything Minimal Install
+# To go from Fedora Everything Minimal Install...
 # Using curated comps groups and select packages
-# To give Fedora everything reasonably needs
+# to give Fedora everything it reasonably needs.
 # As well as toggleable additions
-# To end up with a stable KDE Gaming Desktop
+# ... to end up with a stable KDE Gaming Desktop
 #
 # Philosophy:
 # - Keep packages & groups deliberate and justified.
