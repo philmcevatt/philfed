@@ -1053,9 +1053,6 @@ echo "============================================================"
 echo
 echo "PhilFed ${PHILFED_VERSION} installation complete."
 echo
-echo "Computer name:"
-echo "  ${FINAL_HOSTNAME}"
-echo
 echo "Installed:"
 
 if (( ${#COMPLETED_SECTIONS[@]} == 0 )); then
