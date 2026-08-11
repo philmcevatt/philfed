@@ -349,21 +349,21 @@ if [[ "${INSTALL_NVIDIA}" == "true" ]]; then
   if [[ "${NVIDIA_READY}" == "true" ]]; then
     section "Waiting for NVIDIA module"
     NVIDIA_MODULE_READY=false
-    for i in {1..30}; do
+    for i in {1..6}; do
       if modinfo -k "${target_kernel}" nvidia &>/dev/null; then
         echo "NVIDIA module is available."
         NVIDIA_MODULE_READY=true
         break
       fi
-      echo "Waiting for NVIDIA module build... ${i}/30"
-      sleep 10
+      echo "Waiting for NVIDIA module build... ${i}/6"
+      sleep 5
     done
     if [[ "${NVIDIA_MODULE_READY}" != "true" ]]; then
       warn "NVIDIA module did not become available during the waiting period."
       NVIDIA_READY=false
     fi
   fi
-
+  
   if [[ "${NVIDIA_READY}" == "true" ]]; then
     if ! dracut --force --kver "${target_kernel}"; then
       warn "dracut reported an issue while preparing the NVIDIA driver."
