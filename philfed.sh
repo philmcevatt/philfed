@@ -85,6 +85,11 @@ touch "${LOGFILE}"
 chown "${TARGET_USER}:${TARGET_USER}" "${LOGFILE}"
 chmod 644 "${LOGFILE}"
 
+SUMMARY_FILE="${LOG_DIRECTORY}/philfed-summary-${PHILFED_VERSION}-${LOG_TIMESTAMP}.txt"
+touch "${SUMMARY_FILE}"
+chown "${TARGET_USER}:${TARGET_USER}" "${SUMMARY_FILE}"
+chmod 644 "${SUMMARY_FILE}"
+
 exec > >(tee -a "${LOGFILE}")
 exec 2>&1
 
@@ -1048,12 +1053,13 @@ fi
 ############################################################
 
 section "Installation summary"
-echo
-echo "============================================================"
-echo
-echo "PhilFed ${PHILFED_VERSION} installation complete."
-echo
-echo "Installed:"
+{
+  echo
+  echo "============================================================"
+  echo
+  echo "PhilFed ${PHILFED_VERSION} installation complete."
+  echo
+  echo "Installed:"
 
 if (( ${#COMPLETED_SECTIONS[@]} == 0 )); then
   echo "  None recorded."
@@ -1063,49 +1069,50 @@ else
   done
 fi
 
-echo
-echo "Skipped:"
+  echo
+  echo "Skipped:"
 
 if (( ${#SKIPPED_SECTIONS[@]} == 0 )); then
-  echo "  None"
+    echo "  None"
 else
   for skipped_section in "${SKIPPED_SECTIONS[@]}"; do
     echo "  – ${skipped_section}"
   done
 fi
 
-echo
-echo "Warnings:"
+  echo
+  echo "Warnings:"
 
 if (( ${#WARNINGS[@]} == 0 )); then
-  echo "  None"
+    echo "  None"
 else
   for warning_message in "${WARNINGS[@]}"; do
-    echo "  • ${warning_message}"
+      echo "  • ${warning_message}"
   done
 fi
 
-echo
-echo "Notes:"
+  echo
+  echo "Notes:"
 
 if (( ${#NOTES[@]} == 0 )); then
-  echo "  None"
+    echo "  None"
 else
   for note_message in "${NOTES[@]}"; do
     echo "  • ${note_message}"
   done
 fi
 
-echo
-echo "Installation log:"
-echo "  ${LOGFILE}"
-echo
-echo "Reboot when ready:"
-echo
-echo "    sudo reboot"
-echo
-echo "------------------------------------------------------------"
-echo
-echo "No penguins were harmed during this installation."
-echo
-echo "============================================================"
+  echo
+  echo "Installation log:"
+  echo "  ${LOGFILE}"
+  echo
+  echo "Reboot when ready:"
+  echo
+  echo "    sudo reboot"
+  echo
+  echo "------------------------------------------------------------"
+  echo
+  echo "No penguins were harmed during this installation."
+  echo
+  echo "============================================================"
+} | tee -a "${SUMMARY_FILE}"
