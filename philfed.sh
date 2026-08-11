@@ -319,29 +319,38 @@ complete_section "Enable Plasma Login Manager"
 # Installs RPM Fusion NVIDIA drivers, warns about Secure Boot,
 # builds akmods and regenerates initramfs.
 ############################################################
-
 if [[ "${INSTALL_NVIDIA}" == "true" ]]; then
   section "NVIDIA drivers"
   NVIDIA_READY=true
+
+  # Target the newest installed kernel, not the one currently running.
+  # A kernel upgrade earlier in the script (or an interactive dnf upgrade
+  # beforehand) means uname -r can be stale until the next reboot.
+  target_kernel="$(rpm -q kernel --last | head -1 | awk '{print $1}' | sed 's/^kernel-//')"
+  echo "Building NVIDIA module for kernel ${target_kernel} (next boot)."
+
   if command -v mokutil &>/dev/null && mokutil --sb-state 2>/dev/null | grep -qi "enabled"; then
     warn "Secure Boot is enabled. NVIDIA may not load unless akmods signing/MOK enrolment is configured."
   fi
+
   if ! dnf -y install akmod-nvidia xorg-x11-drv-nvidia-cuda; then
     warn "NVIDIA driver packages could not be installed. Continuing so the final summary and log remain available."
     NVIDIA_READY=false
   fi
+
   if [[ "${NVIDIA_READY}" == "true" ]]; then
     section "Force NVIDIA akmod build"
-    if ! akmods --force; then
+    if ! akmods --force --kernels "${target_kernel}"; then
       warn "NVIDIA akmod build reported an issue."
       NVIDIA_READY=false
     fi
   fi
+
   if [[ "${NVIDIA_READY}" == "true" ]]; then
     section "Waiting for NVIDIA module"
     NVIDIA_MODULE_READY=false
     for i in {1..30}; do
-      if modinfo nvidia &>/dev/null; then
+      if modinfo -k "${target_kernel}" nvidia &>/dev/null; then
         echo "NVIDIA module is available."
         NVIDIA_MODULE_READY=true
         break
@@ -354,15 +363,17 @@ if [[ "${INSTALL_NVIDIA}" == "true" ]]; then
       NVIDIA_READY=false
     fi
   fi
+
   if [[ "${NVIDIA_READY}" == "true" ]]; then
-    if ! dracut --force; then
+    if ! dracut --force --kver "${target_kernel}"; then
       warn "dracut reported an issue while preparing the NVIDIA driver."
       NVIDIA_READY=false
     fi
   fi
+
   if [[ "${NVIDIA_READY}" == "true" ]]; then
     section "Checking NVIDIA module"
-    if modinfo -F version nvidia; then
+    if modinfo -k "${target_kernel}" -F version nvidia; then
       complete_section "NVIDIA drivers"
     else
       warn "NVIDIA module still not ready. Wait a few minutes before rebooting."
