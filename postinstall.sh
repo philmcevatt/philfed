@@ -710,10 +710,10 @@ set_btrfs_label() {
 }
 if [[ "${LABEL_BTRFS}" == "true" ]]; then
   section "Check Btrfs labels"
-  set_btrfs_label / root
-  set_btrfs_label /home home
-  set_btrfs_label /games games
-  set_btrfs_label /qvo qvo
+  set_btrfs_label / root || true
+  set_btrfs_label /home home || true
+  set_btrfs_label /games games || true
+  set_btrfs_label /qvo qvo || true
   echo "Refreshing device information..."
   udevadm trigger || warn "udevadm trigger reported an issue"
   udevadm settle || warn "udevadm settle reported an issue"
