@@ -11,13 +11,11 @@ set -euo pipefail
 ############################################################
 # VERSION
 ############################################################
-
 POSTINSTALL_VERSION="0.0.5"
 
 ############################################################
 # TOGGLES
 ############################################################
-
 INSTALL_NVIDIA=true
 INSTALL_PROTONVPN=true
 INSTALL_VIRT=true
@@ -31,7 +29,6 @@ INSTALL_ASUSCTL=true
 ############################################################
 # INITIAL SAFETY CHECKS
 ############################################################
-
 # This script must be launched from a normal user account through sudo.
 if [[ "${EUID}" -ne 0 ]]; then
   echo "This script must be run with sudo:"
@@ -65,7 +62,6 @@ FEDORA_VERSION="$(rpm -E '%fedora')"
 ############################################################
 # LOGGING
 ############################################################
-
 LOG_DIRECTORY="${TARGET_HOME}/Desktop"
 LOG_TIMESTAMP="$(date '+%Y-%m-%d_%H-%M-%S')"
 LOGFILE="${LOG_DIRECTORY}/postinstall-${POSTINSTALL_VERSION}-${LOG_TIMESTAMP}.log"
@@ -89,7 +85,6 @@ exec 2>&1
 ############################################################
 # COLOURS AND HELPERS
 ############################################################
-
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
@@ -128,7 +123,6 @@ skip_section() {
 ############################################################
 # ENVIRONMENT
 ############################################################
-
 section "Environment"
 echo "Post Install Version: ${POSTINSTALL_VERSION}"
 echo "Fedora Version: ${FEDORA_VERSION}"
@@ -148,7 +142,6 @@ echo "Install asusctl/ROG Control Center: ${INSTALL_ASUSCTL}"
 # CONFIGURE DNF SETTINGS
 # Sets max of 10 parallel package downloads
 ############################################################
-
 section "Configure DNF Settings"
 mkdir -p /etc/dnf/libdnf5.conf.d
 tee /etc/dnf/libdnf5.conf.d/80-local.conf >/dev/null <<'EOF'
@@ -316,7 +309,6 @@ else
   warn "CUPS could not be enabled."
 fi
 
-
 ############################################################
 # PROTON VPN
 # Official Proton VPN Linux GUI via Proton's Fedora repo.
@@ -394,20 +386,19 @@ dnf -y install \
 complete_section "Content creation"
 
 ############################################################
-# GAMING PLATFORM
-# Steam, Lutris, Wine and Proton helper tools.
+# GAMING LAUNCHERS
+# Steam & Lutris, heroic & proton added as flatpaks later.
 ############################################################
-section "Gaming platform"
+section "Gaming Launchers"
 dnf -y install \
   steam \
   lutris
-
-complete_section "Gaming platform"
+complete_section "Gaming Launchers"
 
 ############################################################
 # GAMING EXTRAS
 ############################################################
-section "Gaming performance and graphics"
+section "Gaming Extras"
 dnf -y install \
   gamemode \
   gamescope \
@@ -417,7 +408,7 @@ dnf -y install \
   winetricks \
   vulkan-loader \
   kernel-modules-extra
-complete_section "Gaming performance and graphics"
+complete_section "Gaming Extras"
 
 ############################################################
 # FONTS
@@ -450,7 +441,6 @@ complete_section "Office"
 ############################################################
 if [[ "${INSTALL_VIRT}" == "true" ]]; then
   section "Virtualisation stack"
-
   if dnf -y install \
     virt-manager \
     libvirt \
@@ -461,7 +451,6 @@ if [[ "${INSTALL_VIRT}" == "true" ]]; then
     virt-viewer \
     edk2-ovmf \
     swtpm; then
-
     VIRTUALISATION_READY=true
   else
     VIRTUALISATION_READY=false
@@ -496,7 +485,6 @@ section "VM guest detection"
 VIRT_TYPE="$(systemd-detect-virt || true)"
 if [[ "${VIRT_TYPE}" != "none" ]]; then
   echo "Detected VM guest environment: ${VIRT_TYPE}"
-
   if dnf -y install spice-vdagent; then
     if systemctl enable --now spice-vdagentd.service; then
       complete_section "SPICE guest agent"
