@@ -1,0 +1,3 @@
+# this command adds compression to the etc/fstab entries made during install
+
+sudo sed -i.bkp '/ btrfs / s/subvol=[^ ,]*/&,compress=zstd:1/' /etc/fstab
