@@ -45,7 +45,7 @@ INSTALL_ASUSCTL=true
 # This script must be launched from a normal user account through sudo.
 if [[ "${EUID}" -ne 0 ]]; then
   echo "This script must be run with sudo:"
-  echo "  sudo ./postinstall.sh"
+  echo "  sudo ./philfed.sh"
   exit 1
 fi
 TARGET_USER="${SUDO_USER:-}"
@@ -53,7 +53,7 @@ if [[ -z "${TARGET_USER}" || "${TARGET_USER}" == "root" ]]; then
   echo "Could not detect the normal user account."
   echo "Do not run this from a root shell or with su."
   echo "Run it from your normal account with:"
-  echo "  sudo ./postinstall.sh"
+  echo "  sudo ./philfed.sh"
   exit 1
 fi
 if ! id "${TARGET_USER}" &>/dev/null; then
@@ -208,7 +208,6 @@ complete_section "Enable Cisco OpenH264"
 section "KDE Foundation: DEFAULT Groups"
 DEFAULT_GROUPS=(
   base-graphical
-  core
   fonts
   hardware-support
   kde-desktop
@@ -256,15 +255,7 @@ CURATED_PACKAGES=(
   # from admin-tools
   gnome-disk-utility
   setroubleshoot
-  # from desktop-accessibility
-  at-spi2-atk
-  at-spi2-core
   # from printing
-  cups
-  cups-filters
-  ghostscript
-  cups-browsed
-  nss-mdns
   gutenprint
   hplip
   # from kde-apps
@@ -383,10 +374,7 @@ fi
 section "Core Tools"
 dnf -y install \
   dnf-plugins-core \
-  curl \
   git \
-  nano \
-  usbutils \
   vim
 complete_section "Core Tools"
 
@@ -546,15 +534,6 @@ dnf -y install \
 complete_section "Gaming Extras"
 
 ############################################################
-# LIBERATION FONTS
-# Installs Liberation fonts that LibreOffice uses.
-# Other fonts are installed in KDE Foundation section
-############################################################
-section "Fonts"
-dnf -y install liberation-fonts
-complete_section "Fonts"
-
-############################################################
 # OFFICE
 # Basic LibreOffice tools i use, not full suite
 ############################################################
@@ -564,7 +543,6 @@ dnf -y install \
   libreoffice-writer \
   libreoffice-calc \
   libreoffice-langpack-en \
-  hunspell-en \
   autocorr-en
 complete_section "Office"
 
@@ -956,7 +934,7 @@ if [[ "${INSTALL_OPENRAZER}" == "true" ]]; then
       systemctl --user enable openrazer-daemon.service; then
       echo "OpenRazer user service enabled."
     else
-      note "OpenRazer could not enable its user service from the TTY installer. This has not prevented OpenRazer from working on previous PostInstall installations. Check Polychromatic after logging into Plasma."
+      note "OpenRazer could not enable its user service from the TTY installer. This has not prevented OpenRazer from working on previous PhilFed installations. Check Polychromatic after logging into Plasma."
     fi
     echo "OpenRazer and Polychromatic installed."
     echo "Reboot or log out and back in before using Polychromatic."
@@ -1012,7 +990,7 @@ complete_section "Boot tweaks"
 ############################################################
 # AUTOREMOVE PREVIEW
 # Shows packages DNF considers removable.
-# No packages are automatically removed by PostInstall.
+# No packages are automatically removed by PhilFed.
 ############################################################
 section "Autoremove preview"
 echo "Checking for packages DNF considers removable."
@@ -1045,7 +1023,7 @@ section "Installation summary"
   echo
   echo "============================================================"
   echo
-  echo "PostInstall ${POSTINSTALL_VERSION} installation complete."
+  echo "PhilFed ${PHILFED_VERSION} installation complete."
   echo
   echo "Installed:"
 
