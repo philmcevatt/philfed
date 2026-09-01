@@ -17,14 +17,25 @@ POSTINSTALL_VERSION="0.0.5"
 # TOGGLES
 ############################################################
 INSTALL_NVIDIA=true
+# Nvidia Drivers for current kernel, protected against new kernal added mid script
+INSTALL_BRAVE_ORIGIN=true
+# Installs stripped down Brave-Origin browser
 INSTALL_PROTONVPN=true
+# Free version of Proton VPN if you want a VPN
 INSTALL_VIRT=true
+# Virt Manager software for guest and or host.
 FIX_GAMES_PERMISSIONS=true
+# Gives user ownership permissions for /mnt/games partition / drive
 FIX_QVO_PERMISSIONS=true
+# Gives user ownership permissions for /mnt/qvo partition / drive
 LABEL_BTRFS=true
+# Labels btrfs partitions as this isnt always set in Fedora Everything installer
 INSTALL_MAXWELL_FIX=true
+# Adds fix for Audexe Maxwell dongle issues when dual booting Linux and Windows
 INSTALL_OPENRAZER=true
+# Installs and enables Openrazer and Polychromatic for Razer peripherals.
 INSTALL_ASUSCTL=true
+# Installs and enables Asusctl and Rog Control Centre for Asus laptops.
 
 ############################################################
 # INITIAL SAFETY CHECKS
@@ -129,10 +140,11 @@ echo "Fedora Version: ${FEDORA_VERSION}"
 echo "Target User: ${TARGET_USER}"
 echo "Installation Log: ${LOGFILE}"
 echo "Install NVIDIA: ${INSTALL_NVIDIA}"
+echo "Install Brave Origin: ${INSTALL_BRAVE_ORIGIN}"
 echo "Install ProtonVPN: ${INSTALL_PROTONVPN}"
 echo "Install Virt: ${INSTALL_VIRT}"
-echo "Fix /games permissions: ${FIX_GAMES_PERMISSIONS}"
-echo "Fix /qvo permissions: ${FIX_QVO_PERMISSIONS}"
+echo "Fix /mnt/games permissions: ${FIX_GAMES_PERMISSIONS}"
+echo "Fix /mnt/qvo permissions: ${FIX_QVO_PERMISSIONS}"
 echo "Label Btrfs filesystems: ${LABEL_BTRFS}"
 echo "Install Maxwell Fix: ${INSTALL_MAXWELL_FIX}"
 echo "Install OpenRazer: ${INSTALL_OPENRAZER}"
@@ -149,6 +161,19 @@ tee /etc/dnf/libdnf5.conf.d/80-local.conf >/dev/null <<'EOF'
 max_parallel_downloads=10
 EOF
 complete_section "Configure DNF Settings"
+
+############################################################
+# DNF CONFIG-MANAGER PLUGIN
+# Ensures 'dnf config-manager' (addrepo, setopt, etc.) is
+# available. Not guaranteed present on a minimal install;
+# used later for Cisco OpenH264 and Brave Origin.
+############################################################
+section "DNF config-manager plugin"
+if dnf -y install 'dnf5-command(config-manager)'; then
+  complete_section "DNF config-manager plugin"
+else
+  warn "dnf5-command(config-manager) could not be installed. Steps using 'dnf config-manager' may fail later in this script."
+fi
 
 ############################################################
 # RPM FUSION
@@ -168,6 +193,28 @@ section "Enable Cisco OpenH264"
 dnf config-manager setopt fedora-cisco-openh264.enabled=1 || true
 dnf -y upgrade --refresh
 complete_section "Enable Cisco OpenH264"
+
+############################################################
+# HARDWARE AND NETWORK SUPPORT
+# Adds Fedora's default hardware/firmware support and the
+# commonly-used NetworkManager submodules omitted by the
+# minimal KDE installation.
+############################################################
+section "Hardware Support"
+
+if dnf -y group install hardware-support; then
+  complete_section "Hardware Support"
+else
+  warn "Hardware Support could not be fully installed. Some hardware or firmware support may be incomplete."
+fi
+
+section "Network Manager Submodules"
+
+if dnf -y group install networkmanager-submodules; then
+  complete_section "Network Manager Submodules"
+else
+  warn "Network Manager Submodules could not be fully installed. Wi-Fi or other network functionality may be incomplete."
+fi
 
 ############################################################
 # NVIDIA
@@ -292,6 +339,9 @@ CURATED_PACKAGES=(
   kcolorchooser
   qbittorrent
   keepassxc
+  gnome-disk-utility
+  setroubleshoot
+  libglvnd-gles
 )
 if dnf -y install "${CURATED_PACKAGES[@]}"; then
   complete_section "Curated Packages"
@@ -307,6 +357,35 @@ if systemctl enable --now cups; then
   complete_section "Enable printing service"
 else
   warn "CUPS could not be enabled."
+fi
+
+############################################################
+# BRAVE ORIGIN
+# Optional stripped-down Brave browser from Brave's RPM repo.
+# Repository setup and package installation are non-fatal.
+############################################################
+if [[ "${INSTALL_BRAVE_ORIGIN}" == "true" ]]; then
+section "Brave Origin"
+  BRAVE_REPO_READY=false
+    if [[ -f /etc/yum.repos.d/brave-browser.repo ]]; then
+      echo "Brave repository already configured."
+      BRAVE_REPO_READY=true
+      elif dnf -y config-manager addrepo \
+      --from-repofile=https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo; then
+      echo "Brave repository configured."
+      BRAVE_REPO_READY=true
+      else
+      warn "Brave repository could not be configured. Skipping Brave Origin."
+    fi
+    if [[ "${BRAVE_REPO_READY}" == "true" ]]; then
+      if dnf -y install brave-origin; then
+      complete_section "Brave Origin"
+      else
+      warn "Brave Origin installation failed. Continuing without it."
+      fi
+    fi
+    else
+    skip_section "Brave Origin"
 fi
 
 ############################################################
@@ -624,49 +703,49 @@ fi
 
 ############################################################
 # GAMES MOUNT PERMISSIONS
-# Fixes ownership of the /games mount point.
+# Fixes ownership of the /mnt/games mount point.
 ############################################################
 if [[ "${FIX_GAMES_PERMISSIONS}" == "true" ]]; then
-  if mountpoint -q /games; then
-    section "Configure /games"
+  if mountpoint -q /mnt/games; then
+    section "Configure /mnt/games"
     GAMES_PERMISSIONS_READY=true
-    if ! chown "${TARGET_USER}:${TARGET_USER}" /games; then
-      warn "Could not set ownership of /games"
+    if ! chown "${TARGET_USER}:${TARGET_USER}" /mnt/games; then
+      warn "Could not set ownership of /mnt/games"
       GAMES_PERMISSIONS_READY=false
     fi
-    if ! chmod 755 /games; then
-      warn "Could not set permissions on /games"
+    if ! chmod 755 /mnt/games; then
+      warn "Could not set permissions on /mnt/games"
       GAMES_PERMISSIONS_READY=false
     fi
     if [[ "${GAMES_PERMISSIONS_READY}" == "true" ]]; then
-      complete_section "Configure /games"
+      complete_section "Configure /mnt/games"
     fi
   else
-    warn "/games not mounted, skipping permissions fix"
+    warn "/mnt/games not mounted, skipping permissions fix"
   fi
 fi
 
 ############################################################
 # QVO MOUNT PERMISSIONS
-# Fixes ownership of the /qvo mount point.
+# Fixes ownership of the /mnt/qvo mount point.
 ############################################################
 if [[ "${FIX_QVO_PERMISSIONS}" == "true" ]]; then
-  if mountpoint -q /qvo; then
-    section "Configure /qvo"
+  if mountpoint -q /mnt/qvo; then
+    section "Configure /mnt/qvo"
     QVO_PERMISSIONS_READY=true
-    if ! chown "${TARGET_USER}:${TARGET_USER}" /qvo; then
-      warn "Could not set ownership of /qvo"
+    if ! chown "${TARGET_USER}:${TARGET_USER}" /mnt/qvo; then
+      warn "Could not set ownership of /mnt/qvo"
       QVO_PERMISSIONS_READY=false
     fi
-    if ! chmod 755 /qvo; then
-      warn "Could not set permissions on /qvo"
+    if ! chmod 755 /mnt/qvo; then
+      warn "Could not set permissions on /mnt/qvo"
       QVO_PERMISSIONS_READY=false
     fi
     if [[ "${QVO_PERMISSIONS_READY}" == "true" ]]; then
-      complete_section "Configure /qvo"
+      complete_section "Configure /mnt/qvo"
     fi
   else
-    warn "/qvo not mounted, skipping permissions fix"
+    warn "/mnt/qvo not mounted, skipping permissions fix"
   fi
 fi
 
@@ -712,8 +791,8 @@ if [[ "${LABEL_BTRFS}" == "true" ]]; then
   section "Check Btrfs labels"
   set_btrfs_label / root || true
   set_btrfs_label /home home || true
-  set_btrfs_label /games games || true
-  set_btrfs_label /qvo qvo || true
+  set_btrfs_label /mnt/games games || true
+  set_btrfs_label /mnt/qvo qvo || true
   echo "Refreshing device information..."
   udevadm trigger || warn "udevadm trigger reported an issue"
   udevadm settle || warn "udevadm settle reported an issue"
