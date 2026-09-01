@@ -25,9 +25,9 @@ INSTALL_PROTONVPN=true
 INSTALL_VIRT=true
 # Virt Manager software for guest and or host.
 FIX_GAMES_PERMISSIONS=true
-# Gives user ownership permissions for /games partition / drive
+# Gives user ownership permissions for /mnt/games partition / drive
 FIX_QVO_PERMISSIONS=true
-# Gives user ownership permissions for /qvo partition / drive
+# Gives user ownership permissions for /mnt/qvo partition / drive
 LABEL_BTRFS=true
 # Labels btrfs partitions as this isnt always set in Fedora Everything installer
 INSTALL_MAXWELL_FIX=true
@@ -148,8 +148,8 @@ echo "Install NVIDIA: ${INSTALL_NVIDIA}"
 echo "Install Brave Origin: ${INSTALL_BRAVE_ORIGIN}"
 echo "Install ProtonVPN: ${INSTALL_PROTONVPN}"
 echo "Install Virt: ${INSTALL_VIRT}"
-echo "Fix /games permissions: ${FIX_GAMES_PERMISSIONS}"
-echo "Fix /qvo permissions: ${FIX_QVO_PERMISSIONS}"
+echo "Fix /mnt/games permissions: ${FIX_GAMES_PERMISSIONS}"
+echo "Fix /mnt/qvo permissions: ${FIX_QVO_PERMISSIONS}"
 echo "Label Btrfs filesystems: ${LABEL_BTRFS}"
 echo "Install Maxwell Fix: ${INSTALL_MAXWELL_FIX}"
 echo "Install OpenRazer: ${INSTALL_OPENRAZER}"
@@ -256,6 +256,10 @@ CURATED_PACKAGES=(
   gnome-disk-utility
   setroubleshoot
   # from printing
+  cups
+  cups-filters
+  ghostscript
+  nss-mdns
   gutenprint
   hplip
   # from kde-apps
@@ -543,7 +547,9 @@ dnf -y install \
   libreoffice-writer \
   libreoffice-calc \
   libreoffice-langpack-en \
-  autocorr-en
+  autocorr-en \
+  liberation-fonts \
+  hunspell-en
 complete_section "Office"
 
 ############################################################
@@ -744,49 +750,49 @@ fi
 
 ############################################################
 # GAMES MOUNT PERMISSIONS
-# Fixes ownership of the /games mount point.
+# Fixes ownership of the /mnt/games mount point.
 ############################################################
 if [[ "${FIX_GAMES_PERMISSIONS}" == "true" ]]; then
-  if mountpoint -q /games; then
-    section "Configure /games"
+  if mountpoint -q /mnt/games; then
+    section "Configure /mnt/games"
     GAMES_PERMISSIONS_READY=true
-    if ! chown "${TARGET_USER}:${TARGET_USER}" /games; then
-      warn "Could not set ownership of /games"
+    if ! chown "${TARGET_USER}:${TARGET_USER}" /mnt/games; then
+      warn "Could not set ownership of /mnt/games"
       GAMES_PERMISSIONS_READY=false
     fi
-    if ! chmod 755 /games; then
-      warn "Could not set permissions on /games"
+    if ! chmod 755 /mnt/games; then
+      warn "Could not set permissions on /mnt/games"
       GAMES_PERMISSIONS_READY=false
     fi
     if [[ "${GAMES_PERMISSIONS_READY}" == "true" ]]; then
-      complete_section "Configure /games"
+      complete_section "Configure /mnt/games"
     fi
   else
-    warn "/games not mounted, skipping permissions fix"
+    warn "/mnt/games not mounted, skipping permissions fix"
   fi
 fi
 
 ############################################################
 # QVO MOUNT PERMISSIONS
-# Fixes ownership of the /qvo mount point.
+# Fixes ownership of the /mnt/qvo mount point.
 ############################################################
 if [[ "${FIX_QVO_PERMISSIONS}" == "true" ]]; then
-  if mountpoint -q /qvo; then
-    section "Configure /qvo"
+  if mountpoint -q /mnt/qvo; then
+    section "Configure /mnt/qvo"
     QVO_PERMISSIONS_READY=true
-    if ! chown "${TARGET_USER}:${TARGET_USER}" /qvo; then
-      warn "Could not set ownership of /qvo"
+    if ! chown "${TARGET_USER}:${TARGET_USER}" /mnt/qvo; then
+      warn "Could not set ownership of /mnt/qvo"
       QVO_PERMISSIONS_READY=false
     fi
-    if ! chmod 755 /qvo; then
-      warn "Could not set permissions on /qvo"
+    if ! chmod 755 /mnt/qvo; then
+      warn "Could not set permissions on /mnt/qvo"
       QVO_PERMISSIONS_READY=false
     fi
     if [[ "${QVO_PERMISSIONS_READY}" == "true" ]]; then
-      complete_section "Configure /qvo"
+      complete_section "Configure /mnt/qvo"
     fi
   else
-    warn "/qvo not mounted, skipping permissions fix"
+    warn "/mnt/qvo not mounted, skipping permissions fix"
   fi
 fi
 
@@ -830,10 +836,10 @@ set_btrfs_label() {
 }
 if [[ "${LABEL_BTRFS}" == "true" ]]; then
   section "Check Btrfs labels"
-  set_btrfs_label / fedora || true
+  set_btrfs_label / root || true
   set_btrfs_label /home home || true
-  set_btrfs_label /games games || true
-  set_btrfs_label /qvo qvo || true
+  set_btrfs_label /mnt/games games || true
+  set_btrfs_label /mnt/qvo qvo || true
   echo "Refreshing device information..."
   udevadm trigger || warn "udevadm trigger reported an issue"
   udevadm settle || warn "udevadm settle reported an issue"
