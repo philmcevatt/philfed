@@ -252,9 +252,6 @@ fi
 ############################################################
 section "KDE Foundation: Curated Packages"
 CURATED_PACKAGES=(
-  # from admin-tools
-  gnome-disk-utility
-  setroubleshoot
   # from printing
   cups
   cups-filters
@@ -644,7 +641,6 @@ flatpak install -y flathub org.freefilesync.FreeFileSync || warn "FreeFileSync F
 flatpak install -y flathub com.heroicgameslauncher.hgl || warn "Heroic Flatpak failed"
 flatpak install -y flathub org.localsend.localsend_app || warn "LocalSend Flatpak failed"
 flatpak install -y flathub com.vysp3r.ProtonPlus || warn "ProtonPlus Flatpak failed"
-flatpak install -y flathub io.github.vikdevelop.SaveDesktop || warn "SaveDesktop Flatpak failed"
 flatpak install -y flathub dev.vencord.Vesktop || warn "Vesktop Flatpak failed"
 flatpak install -y flathub net.waterfox.waterfox || warn "Waterfox Flatpak failed"
 if flatpak update -y; then
