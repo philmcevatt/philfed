@@ -34,7 +34,7 @@ INSTALL_MAXWELL_FIX=true
 # Adds fix for Audexe Maxwell dongle issues when dual booting Linux and Windows
 INSTALL_OPENRAZER=true
 # Installs and enables Openrazer and Polychromatic for Razer peripherals.
-INSTALL_ASUSCTL=true
+INSTALL_ASUSCTL=false
 # Installs and enables Asusctl and Rog Control Centre for Asus laptops.
 
 ############################################################
@@ -339,8 +339,6 @@ CURATED_PACKAGES=(
   kcolorchooser
   qbittorrent
   keepassxc
-  gnome-disk-utility
-  setroubleshoot
   libglvnd-gles
 )
 if dnf -y install "${CURATED_PACKAGES[@]}"; then
@@ -597,7 +595,6 @@ flatpak install -y flathub org.freefilesync.FreeFileSync || warn "FreeFileSync F
 flatpak install -y flathub com.heroicgameslauncher.hgl || warn "Heroic Flatpak failed"
 flatpak install -y flathub org.localsend.localsend_app || warn "LocalSend Flatpak failed"
 flatpak install -y flathub com.vysp3r.ProtonPlus || warn "ProtonPlus Flatpak failed"
-flatpak install -y flathub io.github.vikdevelop.SaveDesktop || warn "SaveDesktop Flatpak failed"
 flatpak install -y flathub dev.vencord.Vesktop || warn "Vesktop Flatpak failed"
 flatpak install -y flathub net.waterfox.waterfox || warn "Waterfox Flatpak failed"
 if flatpak update -y; then
