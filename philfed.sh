@@ -34,7 +34,7 @@ INSTALL_MAXWELL_FIX=true
 # Adds fix for Audexe Maxwell dongle issues when dual booting Linux and Windows
 INSTALL_OPENRAZER=true
 # Installs and enables Openrazer and Polychromatic for Razer peripherals.
-INSTALL_ASUSCTL=true
+INSTALL_ASUSCTL=false
 # Installs and enables Asusctl and Rog Control Centre for Asus laptops.
 
 ############################################################
