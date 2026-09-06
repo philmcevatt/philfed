@@ -459,7 +459,7 @@ if [[ "${INSTALL_PROTONVPN}" == "true" ]]; then
     elif rpm -q proton-vpn-gnome-desktop proton-vpn-daemon &>/dev/null; then
       echo "Proton VPN packages are installed despite the reported installation error."
       complete_section "Proton VPN"
-      note "Proton VPN reported a service setup error during installation. This may relate to split tunnelling, which is unavailable on the free Proton VPN plan. Check that the main VPN application works after rebooting."
+      note "Proton VPN reported a service setup error. This relates to split tunnelling, which is unavailable on the free Proton VPN plan."
     else
       warn "Proton VPN installation did not complete. Continuing without Proton VPN."
     fi
@@ -936,7 +936,7 @@ if [[ "${INSTALL_OPENRAZER}" == "true" ]]; then
       systemctl --user enable openrazer-daemon.service; then
       echo "OpenRazer user service enabled."
     else
-      note "OpenRazer could not enable its user service from the TTY installer. This has not prevented OpenRazer from working on previous PhilFed installations. Check Polychromatic after logging into Plasma."
+      note "OpenRazer could not enable its user service from the TTY installer. This has not prevented OpenRazer from working before."
     fi
     echo "OpenRazer and Polychromatic installed."
     echo "Reboot or log out and back in before using Polychromatic."
