@@ -18,7 +18,7 @@ PHILFED_VERSION="0.7.1"
 ############################################################
 INSTALL_NVIDIA=true
 # Nvidia Drivers for current kernel, protected against new kernal added mid script
-INSTALL_BRAVE_ORIGIN=true
+INSTALL_BRAVE_ORIGIN=true 
 # Installs stripped down Brave-Origin browser
 INSTALL_PROTONVPN=true
 # Free version of Proton VPN if you want a VPN
@@ -480,17 +480,6 @@ dnf -y install \
 complete_section "Multimedia and codecs"
 
 ############################################################
-# VLC MEDIA PLAYER
-# Installs VLC Media Player and its freeworld plugin set.
-############################################################
-section "VLC"
-dnf -y install \
-  vlc \
-  vlc-plugins-base \
-  vlc-plugins-freeworld
-complete_section "VLC"
-
-############################################################
 # CONTENT CREATION
 # Recording, streaming and video editing.
 ############################################################
@@ -639,6 +628,7 @@ flatpak install -y flathub md.obsidian.Obsidian || warn "Obsidian Flatpak failed
 flatpak install -y flathub com.vysp3r.ProtonPlus || warn "ProtonPlus Flatpak failed"
 flatpak install -y flathub dev.vencord.Vesktop || warn "Vesktop Flatpak failed"
 flatpak install -y flathub com.vivaldi.Vivaldi || warn "Vivaldi Flatpak failed"
+flatpak install -y flathub org.videolan.VLC || warn "VLC Flatpak failed"
 flatpak install -y flathub net.waterfox.waterfox || warn "Waterfox Flatpak failed"
 
 if flatpak update -y; then
