@@ -11,7 +11,7 @@ set -euo pipefail
 ############################################################
 # VERSION
 ############################################################
-PHILFED_VERSION="0.7.0"
+PHILFED_VERSION="0.7.1"
 
 ############################################################
 # TOGGLES
@@ -34,7 +34,7 @@ INSTALL_MAXWELL_FIX=true
 # Adds fix for Audexe Maxwell dongle issues when dual booting Linux and Windows
 INSTALL_OPENRAZER=true
 # Installs and enables Openrazer and Polychromatic for Razer peripherals.
-INSTALL_ASUSCTL=false
+INSTALL_ASUSCTL=true
 # Installs and enables Asusctl and Rog Control Centre for Asus laptops.
 
 ############################################################
@@ -369,22 +369,14 @@ else
 fi
 
 ############################################################
-# CORE TOOLS
-# Adds basic CLI tools.
+# CORE & SYSTEM UTILITIES
+# CLI, Monitoring, shell, storage tools, Btrfs tools and archives.
 ############################################################
-section "Core Tools"
+section "Core & System utilities"
 dnf -y install \
   dnf-plugins-core \
   git \
-  vim
-complete_section "Core Tools"
-
-############################################################
-# SYSTEM UTILITIES
-# Monitoring, shell, storage tools, Btrfs tools and archives.
-############################################################
-section "System utilities"
-dnf -y install \
+  vim \
   btop \
   nvtop \
   fastfetch \
@@ -394,7 +386,7 @@ dnf -y install \
   p7zip \
   p7zip-plugins \
   unrar
-complete_section "System utilities"
+complete_section "Core & System utilities"
 
 ############################################################
 # WEB AND INTERNET
@@ -505,7 +497,6 @@ complete_section "VLC"
 section "Content creation"
 dnf -y install \
   obs-studio \
-  kdenlive \
   pinta
 complete_section "Content creation"
 
@@ -637,12 +628,19 @@ complete_section "Flatpak and Flathub"
 ############################################################
 section "Flatpak apps"
 flatpak install -y flathub com.github.tchx84.Flatseal || warn "Flatseal Flatpak failed"
+flatpak install -y flathub com.usebottles.bottles || warn "Bottles Flatpak failed"
+flatpak install -y flathub org.mozilla.firefox || warn "Firefox Flatpak failed"
+flatpak install -y flathub one.ablaze.floorp || warn "Floorp Flatpak failed"
 flatpak install -y flathub org.freefilesync.FreeFileSync || warn "FreeFileSync Flatpak failed"
 flatpak install -y flathub com.heroicgameslauncher.hgl || warn "Heroic Flatpak failed"
+flatpak install -y flathub org.kde.kdenlive || warn "Kdenlive Flatpak failed"
 flatpak install -y flathub org.localsend.localsend_app || warn "LocalSend Flatpak failed"
+flatpak install -y flathub md.obsidian.Obsidian || warn "Obsidian Flatpak failed"
 flatpak install -y flathub com.vysp3r.ProtonPlus || warn "ProtonPlus Flatpak failed"
 flatpak install -y flathub dev.vencord.Vesktop || warn "Vesktop Flatpak failed"
+flatpak install -y flathub com.vivaldi.Vivaldi || warn "Vivaldi Flatpak failed"
 flatpak install -y flathub net.waterfox.waterfox || warn "Waterfox Flatpak failed"
+
 if flatpak update -y; then
   echo "Flatpak applications and runtimes updated."
 else
