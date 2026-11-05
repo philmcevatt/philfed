@@ -485,8 +485,7 @@ complete_section "Multimedia and codecs"
 ############################################################
 section "Content creation"
 dnf -y install \
-  obs-studio \
-  pinta
+  obs-studio
 complete_section "Content creation"
 
 ############################################################
@@ -625,6 +624,7 @@ flatpak install -y flathub com.heroicgameslauncher.hgl || warn "Heroic Flatpak f
 flatpak install -y flathub org.kde.kdenlive || warn "Kdenlive Flatpak failed"
 flatpak install -y flathub org.localsend.localsend_app || warn "LocalSend Flatpak failed"
 flatpak install -y flathub md.obsidian.Obsidian || warn "Obsidian Flatpak failed"
+flatpak install -y flathub com.github.PintaProject.Pinta || warn "Pinta Flatpak failed"
 flatpak install -y flathub com.vysp3r.ProtonPlus || warn "ProtonPlus Flatpak failed"
 flatpak install -y flathub dev.vencord.Vesktop || warn "Vesktop Flatpak failed"
 flatpak install -y flathub com.vivaldi.Vivaldi || warn "Vivaldi Flatpak failed"
