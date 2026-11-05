@@ -457,9 +457,7 @@ complete_section "VLC"
 ############################################################
 section "Content creation"
 dnf -y install \
-  obs-studio \
-  kdenlive \
-  pinta
+  obs-studio
 complete_section "Content creation"
 
 ############################################################
@@ -591,11 +589,19 @@ complete_section "Flatpak and Flathub"
 ############################################################
 section "Flatpak apps"
 flatpak install -y flathub com.github.tchx84.Flatseal || warn "Flatseal Flatpak failed"
+flatpak install -y flathub com.usebottles.bottles || warn "Bottles Flatpak failed"
+flatpak install -y flathub org.mozilla.firefox || warn "Firefox Flatpak failed"
+flatpak install -y flathub one.ablaze.floorp || warn "Floorp Flatpak failed"
 flatpak install -y flathub org.freefilesync.FreeFileSync || warn "FreeFileSync Flatpak failed"
 flatpak install -y flathub com.heroicgameslauncher.hgl || warn "Heroic Flatpak failed"
+flatpak install -y flathub org.kde.kdenlive || warn "Kdenlive Flatpak failed"
 flatpak install -y flathub org.localsend.localsend_app || warn "LocalSend Flatpak failed"
+flatpak install -y flathub md.obsidian.Obsidian || warn "Obsidian Flatpak failed"
+flatpak install -y flathub com.github.PintaProject.Pinta || warn "Pinta Flatpak failed"
 flatpak install -y flathub com.vysp3r.ProtonPlus || warn "ProtonPlus Flatpak failed"
 flatpak install -y flathub dev.vencord.Vesktop || warn "Vesktop Flatpak failed"
+flatpak install -y flathub com.vivaldi.Vivaldi || warn "Vivaldi Flatpak failed"
+flatpak install -y flathub org.videolan.VLC || warn "VLC Flatpak failed"
 flatpak install -y flathub net.waterfox.waterfox || warn "Waterfox Flatpak failed"
 if flatpak update -y; then
   echo "Flatpak applications and runtimes updated."
