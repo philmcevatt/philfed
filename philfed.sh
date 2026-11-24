@@ -18,9 +18,9 @@ PHILFED_VERSION="0.7.1"
 ############################################################
 INSTALL_NVIDIA=false
 # Nvidia Drivers for current kernel, protected against new kernal added mid script
-INSTALL_BRAVE_ORIGIN=false 
+INSTALL_BRAVE_ORIGIN=true 
 # Installs stripped down Brave-Origin browser
-INSTALL_PROTONVPN=false
+INSTALL_PROTONVPN=true
 # Free version of Proton VPN if you want a VPN
 INSTALL_VIRT=true
 # Virt Manager software for guest and or host.
@@ -208,7 +208,6 @@ complete_section "Enable Cisco OpenH264"
 section "KDE Foundation: DEFAULT Groups"
 DEFAULT_GROUPS=(
   base-graphical
-  fonts
   hardware-support
   kde-desktop
   multimedia
@@ -624,10 +623,8 @@ flatpak install -y flathub com.heroicgameslauncher.hgl || warn "Heroic Flatpak f
 flatpak install -y flathub org.kde.kdenlive || warn "Kdenlive Flatpak failed"
 flatpak install -y flathub org.localsend.localsend_app || warn "LocalSend Flatpak failed"
 flatpak install -y flathub md.obsidian.Obsidian || warn "Obsidian Flatpak failed"
-flatpak install -y flathub com.github.PintaProject.Pinta || warn "Pinta Flatpak failed"
 flatpak install -y flathub com.vysp3r.ProtonPlus || warn "ProtonPlus Flatpak failed"
 flatpak install -y flathub dev.vencord.Vesktop || warn "Vesktop Flatpak failed"
-flatpak install -y flathub com.vivaldi.Vivaldi || warn "Vivaldi Flatpak failed"
 flatpak install -y flathub org.videolan.VLC || warn "VLC Flatpak failed"
 flatpak install -y flathub net.waterfox.waterfox || warn "Waterfox Flatpak failed"
 
