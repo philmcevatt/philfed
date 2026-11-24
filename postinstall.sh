@@ -16,7 +16,7 @@ POSTINSTALL_VERSION="0.0.5"
 ############################################################
 # TOGGLES
 ############################################################
-INSTALL_NVIDIA=true
+INSTALL_NVIDIA=false
 # Nvidia Drivers for current kernel, protected against new kernal added mid script
 INSTALL_BRAVE_ORIGIN=true
 # Installs stripped down Brave-Origin browser
@@ -24,15 +24,15 @@ INSTALL_PROTONVPN=true
 # Free version of Proton VPN if you want a VPN
 INSTALL_VIRT=true
 # Virt Manager software for guest and or host.
-FIX_GAMES_PERMISSIONS=true
+FIX_GAMES_PERMISSIONS=false
 # Gives user ownership permissions for /mnt/games partition / drive
-FIX_QVO_PERMISSIONS=true
+FIX_QVO_PERMISSIONS=false
 # Gives user ownership permissions for /mnt/qvo partition / drive
 LABEL_BTRFS=true
 # Labels btrfs partitions as this isnt always set in Fedora Everything installer
-INSTALL_MAXWELL_FIX=true
+INSTALL_MAXWELL_FIX=false
 # Adds fix for Audexe Maxwell dongle issues when dual booting Linux and Windows
-INSTALL_OPENRAZER=true
+INSTALL_OPENRAZER=false
 # Installs and enables Openrazer and Polychromatic for Razer peripherals.
 INSTALL_ASUSCTL=false
 # Installs and enables Asusctl and Rog Control Centre for Asus laptops.
@@ -491,7 +491,7 @@ complete_section "Gaming Extras"
 # As well as Liberation fonts that LibreOffice uses.
 ############################################################
 section "Fonts"
-dnf -y group install fonts
+# dnf -y group install fonts
 dnf -y install liberation-fonts
 complete_section "Fonts"
 
